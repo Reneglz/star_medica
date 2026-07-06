@@ -1,0 +1,341 @@
+"""Datos del Checklist 200 (SIGECES) para carga inicial.
+   15 proyectos (uno por área) con sus tareas. Generado del PDF oficial.
+"""
+
+CHECKLIST = [
+  {
+    "nombre": "GLD",
+    "color": "#FF8033",
+    "descripcion": "Checklist 200 · Arranque SIGECES — 9 puntos de verificación.",
+    "fecha_inicio": "2026-07-06",
+    "fecha_fin": "2026-09-30",
+    "tareas": [
+      "Activar COHCASEP de Arranque",
+      "Designar líderes y suplentes de cada sistema crítico SIGECES.",
+      "Conformar oficialmente los 5 Star Teams.",
+      "Publicar la agenda de Star Teams por los primeros 3 meses (mensual)",
+      "Conformar y activar el Equipo ERIO (Equipo de Respuesta Inmediata Operativa).",
+      "Validar que cada líder conoce qué indicador SIGECES debe reportar.",
+      "Difundir que los indicadores se deben reportar semanalmente durante los primeros 3 meses.",
+      "Chats de comunicación para temas específicos de coordinación",
+      "Servicio de mensajería 24/7 para urgencias (medicamentos, apoyos de otros hospitales)"
+    ]
+  },
+  {
+    "nombre": "SOCYSP",
+    "color": "#009192",
+    "descripcion": "Checklist 200 · Arranque SIGECES — 17 puntos de verificación.",
+    "fecha_inicio": "2026-07-06",
+    "fecha_fin": "2026-09-30",
+    "tareas": [
+      "Contar con GRBM de preapertura documentado.",
+      "GRBM SACPA",
+      "GRBM GECIN",
+      "GRBM GEUM",
+      "GRBM GECYC",
+      "GRBM GESENH",
+      "Difusión del uso de SINERES",
+      "Verificar acceso a SINERES en todas las computadoras",
+      "Difusión de Programa de Cultura Justa",
+      "Difusión de Marco para la Gestión Ética",
+      "Difusión del Uso de Biblioteca Virtual",
+      "Verificar acceso a Biblioteca Virtual en todas las computadoras",
+      "Verificar usuarios de acceso a BV (personalizado y genérico)",
+      "Listado de Star Outsourcing",
+      "Programa Operativo de Star Outsourcing",
+      "Listado de Trazadores Diarios los primeros 3 meses",
+      "Medición semanal de KRIs"
+    ]
+  },
+  {
+    "nombre": "GEUM",
+    "color": "#009051",
+    "descripcion": "Checklist 200 · Arranque SIGECES — 9 puntos de verificación.",
+    "fecha_inicio": "2026-07-06",
+    "fecha_fin": "2026-09-30",
+    "tareas": [
+      "Star List",
+      "Existencia de Medicamentos Star List Vitales",
+      "Farmacias / proveedores para Medicamentos Fuera de Línea",
+      "Carpeta Normativa de Farmacia (PNOs)",
+      "Hieleras / dispositivos para traslado de red fría de medicamentos",
+      "Medición de temperatura y humedad en áreas - Trazabilidad y formatos",
+      "Termometro de farmacia calibrado y funcional",
+      "Termometro de red fria calibrado y funcional",
+      "Usuarios y claves para SAFE"
+    ]
+  },
+  {
+    "nombre": "GESENH",
+    "color": "#FFC000",
+    "descripcion": "Checklist 200 · Arranque SIGECES — 29 puntos de verificación.",
+    "fecha_inicio": "2026-07-06",
+    "fecha_fin": "2026-09-30",
+    "tareas": [
+      "Puertas de Emergencia funcionales",
+      "Extintores / hidrantes / mangueras / sensores FUNCIONALES Y CON PRUEBAS",
+      "Contenedor (con etiqueta) definido y colocado de Residuos de Medicamentos en todas las áreas clínicas",
+      "Gabinete de control de llaves de áreas",
+      "Duplicados de llaves de áreas",
+      "Sistema de cacheo activo",
+      "Etiquetas e impresora para acceso de proveedores",
+      "Listado de Mantenimientos Predictivos de Arranque (Biomédica)",
+      "Listado de Mantenimientos Preventivos de Arranque (Servicios Prioritarios)",
+      "Kit contra derrames (Emergencias, Laboratorio, CEYE, Cocina, Imagen, Cuarto de máquinas, Cuarto/Taller de Mantenimiento, Esp",
+      "Listado de Sustancias y Residuos Peligrosos",
+      "Hoijas de Seguridad de Sustancias disponibles en todos los servicios",
+      "Tomas de gases medicinales probadas",
+      "Configuración de AC en todas las áreas definidas",
+      "Verificación / medición de temperatura en espacios de equipos biomédicos sensibles a calor (TAC, Hemodinamia etc)",
+      "Presiones positivas y negativas funcionales en cubículos definidos",
+      "Llamado enfermería funcional",
+      "Radios Funcionales en áreas definidas",
+      "Canales establecidos",
+      "Extensión para activación de códigos de emergencia",
+      "Pruebas de la planta de emergencia",
+      "Simulacro persona atrapada en elevador ejecutado y analizado",
+      "Equipo biomédico con carga suficiente",
+      "Compatibilidad de cables troncales con insumos",
+      "Stock de reposición de equipo de monitoreo",
+      "Capacitación en uso de Quirófanos Inteligentes ejecutada y documentada",
+      "Verificar conexión de insumos con torres de laparoscopia funcionales",
+      "Documentación de equipos biomédicos (factura, ODC, ETC)",
+      "Contenedor de Residuos de Vidrio"
+    ]
+  },
+  {
+    "nombre": "SACPA",
+    "color": "#6F2F9F",
+    "descripcion": "Checklist 200 · Arranque SIGECES — 16 puntos de verificación.",
+    "fecha_inicio": "2026-07-06",
+    "fecha_fin": "2026-09-30",
+    "tareas": [
+      "Pruebas a compresas para validar que sean radiopacas",
+      "Brazaletes de TA de todas las medidas",
+      "Tarjetones de Recién Nacido",
+      "Brazaletes de Identificación",
+      "Impresora de Brazaletes de ID",
+      "Plumones para marcaje quirúrgico",
+      "Estuches de diagnóstico en áreas definidas",
+      "Ligaduras",
+      "Insumos de diferentes medidas (sondas, cateteres, hojas de laringo, suturas)",
+      "Gel para Ultrasonido",
+      "Hojas de EKG",
+      "Glucometros con insumos suficientes",
+      "Certificados de Nacimiento",
+      "Certificados de Defunción",
+      "Simulacro ejecutado y analizado de Código STAR, HIP y Oro",
+      "Telemetría funcional con pruebas realizadas"
+    ]
+  },
+  {
+    "nombre": "GESADI",
+    "color": "#2E75B6",
+    "descripcion": "Checklist 200 · Arranque SIGECES — 12 puntos de verificación.",
+    "fecha_inicio": "2026-07-06",
+    "fecha_fin": "2026-09-30",
+    "tareas": [
+      "Claves de acceso para Laboratorio en todas las áreas definidas",
+      "Listado de estudios para subrogar (laboratorio)",
+      "Equipos calibrados y funcionales",
+      "Insumos disponibles para los equipos",
+      "Hieleras / dispositivos para traslado de red fría de muestras subrogadas de la laboratorio",
+      "Claves de acceso Eden en todas las áreas definidas",
+      "Pruebas de Acceso a EDEN en Urgencias, Áreas Criticas, Hospitalización, Quirófano",
+      "Mandiles plomados en todas las áreas definidas",
+      "Dosimetros en todas las áreas definidas",
+      "Listado de estudios para subrogar",
+      "Hieleras / dispositivos para traslado de red fría de componentes sanguíneos",
+      "Monitor de consulta de imagenología en todas las áreas definidas"
+    ]
+  },
+  {
+    "nombre": "GECIN",
+    "color": "#FF2E92",
+    "descripcion": "Checklist 200 · Arranque SIGECES — 14 puntos de verificación.",
+    "fecha_inicio": "2026-07-06",
+    "fecha_fin": "2026-09-30",
+    "tareas": [
+      "Difusión de VIGIAH",
+      "Stock definido con Lavartex - Arranque de ROPA + ROPA DESECHABLE - todos los servicios",
+      "Accesos a portal CAUDA",
+      "Microbiológicos de AyB - Superficie, Alimentos, Manos, Agua",
+      "Medidores de cloro",
+      "Bitácora de cloración",
+      "Personal definido y capacitado para medición de cloro",
+      "Bolsas y contenedores de RPBI",
+      "Contenedores rigidos de punzocortantes para agujas de biopsia",
+      "Almacén Temporal RPBI definido y listo",
+      "Área de limpieza de endoscopios definida",
+      "Simulacro de limpieza de endoscopios",
+      "Personal definido para limpieza de endoscopios",
+      "Herramientas de Vigilancia Epidemiológica diaria"
+    ]
+  },
+  {
+    "nombre": "GECYC",
+    "color": "#006FC0",
+    "descripcion": "Checklist 200 · Arranque SIGECES — 14 puntos de verificación.",
+    "fecha_inicio": "2026-07-06",
+    "fecha_fin": "2026-09-30",
+    "tareas": [
+      "Gafetes de personal",
+      "Expedientes integrados de personal",
+      "Directorio de personal (extensiones)",
+      "Expedientes de médicos credencializados",
+      "Credencialización de médicos pendientes acorde al listado inicial de mapeo (Vinculación Médica)",
+      "Distribución de personal Star Life 24/7 con competencias validadas",
+      "Control de Microbiológicos de Personal POE, AyB, Hemodiálisis, Laboratorio",
+      "Expedientes completos POE",
+      "Matriz de Asignación y Reasignación de Personal",
+      "Listado de Personal sin cédula profesional",
+      "Rubrica de evaluación de Farmacéuticos Clínicos",
+      "Seguimiento a Accidentes Laborales (Incluyendo RPBI y punzocortantes)",
+      "Inducción documentada a todo el personal",
+      "Habilitación al puesto documentada de todo el personal"
+    ]
+  },
+  {
+    "nombre": "EMERGENCIAS",
+    "color": "#C00000",
+    "descripcion": "Checklist 200 · Arranque SIGECES — 25 puntos de verificación.",
+    "fecha_inicio": "2026-07-06",
+    "fecha_fin": "2026-09-30",
+    "tareas": [
+      "Evaluación de Riesgos Externos (GESENH)",
+      "Simulacro ejecutado y analizado de Código Naranja",
+      "Tener conformadas y entrenadas las Brigadas de Emergencia",
+      "Validar rutas de evacuación, señalética y puntos de reunión.",
+      "Checklist de carros de paro completo",
+      "Carros de paro con insumos y materiales para adultos, pediátricos y neonatales",
+      "Candados para carros de paro y su bitácora de control",
+      "Contar con cajas de emergencia obstétrica completas y verificadas.",
+      "Realizar la Auditoría de Riesgo de Suicidio",
+      "Medicamentos Star List Vitales",
+      "- Alacramin",
+      "Equipo biomédico calibrado y funcional",
+      "- Ventiladores de traslado",
+      "- Tococardiógrafo",
+      "Tabla rigida para traslados",
+      "Balón de Brakri",
+      "Tabla rigida para traslados",
+      "Equipo de Parto en Urgencias",
+      "Área de descontaminación Funcional",
+      "Simulacros de atención a pacientes",
+      "- Atención de Parto",
+      "- Atención de Paciente en Situación de Urgencia",
+      "- Atención de Paciente Politraumatizado",
+      "Kit de Vía Aerea Díficil",
+      "Kit de Intubación"
+    ]
+  },
+  {
+    "nombre": "CEYE",
+    "color": "#00B0F0",
+    "descripcion": "Checklist 200 · Arranque SIGECES — 10 puntos de verificación.",
+    "fecha_inicio": "2026-07-06",
+    "fecha_fin": "2026-09-30",
+    "tareas": [
+      "Indicadores Quimicos y biológicos disponibles",
+      "Formatos de cargas impresos y en carpeta",
+      "Formatos de esterilización disponibles en quirófano",
+      "Capacitación de autoclaves a todo el personal de CEyE",
+      "Vinculo con GESENH (Integración a Programa de Sustancias, Fuego y Humo, Biomédica)",
+      "Anaqueles SUBCEYE colocados y asegurados",
+      "Bolsas y papel para cargas / consumibles / Cintas testigo disponibles",
+      "Periodo de caducidad definido para paquetes e instrumental",
+      "Consumibles para lavado / prelavado / transporte de instrumental disponibles",
+      "Charolas armadas en CEYE"
+    ]
+  },
+  {
+    "nombre": "AyB",
+    "color": "#929000",
+    "descripcion": "Checklist 200 · Arranque SIGECES — 6 puntos de verificación.",
+    "fecha_inicio": "2026-07-06",
+    "fecha_fin": "2026-09-30",
+    "tareas": [
+      "Bitácoras de Red Fría en Cocina",
+      "Tarjetas de Dietas disponibles",
+      "Manteletas disponibles",
+      "Carro de entrega de dietas disponible y desinfectado",
+      "Charolas de entrega de dietas disponibles y desinfectadas",
+      "Loza disponible y suficiente"
+    ]
+  },
+  {
+    "nombre": "Administración / TI",
+    "color": "#935200",
+    "descripcion": "Checklist 200 · Arranque SIGECES — 13 puntos de verificación.",
+    "fecha_inicio": "2026-07-06",
+    "fecha_fin": "2026-09-30",
+    "tareas": [
+      "Accesos para Portal de Formatos disponibles en todas las computadoras",
+      "Accesos para Contenedor de Formatos disponibles en todas las computadoras",
+      "Listado de extensiones por servicio",
+      "Capacitación en SAP ejecutada para todo el personal con cuenta",
+      "Plan B para falla de SAP",
+      "Plan B para falla de Internet",
+      "Portales funcionales (Formatos, tickets, etc)",
+      "Internet funcional en todas las áreas",
+      "Terminales de pago funcionales en todas las Cajas",
+      "Impresoras funcionales y con toner en todas las áreas",
+      "Computadoras funcionales en todas las áreas",
+      "Lista de precios para PROFECO definida e impresa",
+      "Carpeta de PROFECO"
+    ]
+  },
+  {
+    "nombre": "COMERCIAL",
+    "color": "#5E5E5E",
+    "descripcion": "Checklist 200 · Arranque SIGECES — 2 puntos de verificación.",
+    "fecha_inicio": "2026-07-06",
+    "fecha_fin": "2026-09-30",
+    "tareas": [
+      "Contacto con Hospitales Públicos para traslados",
+      "Rol de guardias / Interconsultas"
+    ]
+  },
+  {
+    "nombre": "ABASTECIMIENTO",
+    "color": "#FF40FF",
+    "descripcion": "Checklist 200 · Arranque SIGECES — 9 puntos de verificación.",
+    "fecha_inicio": "2026-07-06",
+    "fecha_fin": "2026-09-30",
+    "tareas": [
+      "Formatos de impresión de sitio disponibles en todas las áreas",
+      "Insumos básicos para cirugía - asepsia disponibles",
+      "Sabana de cargos de cirugía disponible",
+      "Sellos de todas las áreas disponibles (normativos y no normativos)",
+      "Papelería disponible (HOJAS, TIJERAS, GRAPADORA, GRAPAS, QUITAGRAPAS, PLUMAS NEGRO, VERDE, ROJO) /",
+      "Plan de reservas por servicio",
+      "Catalógo de Vistas - Integración a almacén",
+      "Listado de contactos de proveedores",
+      "Pilas suficientes para todos los dispositivos (AA, AAA)"
+    ]
+  },
+  {
+    "nombre": "IMPRENTA",
+    "color": "#C1C1C1",
+    "descripcion": "Checklist 200 · Arranque SIGECES — 15 puntos de verificación.",
+    "fecha_inicio": "2026-07-06",
+    "fecha_fin": "2026-09-30",
+    "tareas": [
+      "Etiquetas de alertas de medicamentos (LASA y MAR)",
+      "Etiquetas de preparación y administración de medicamentos",
+      "Formatos del expediente clínico institucional (vía imprenta)",
+      "Bitácoras EELYS (Star Goal 2) para todos los servicios.",
+      "Bitácoras de hotelería (HKP)",
+      "Bitácora de Código Alba",
+      "Bitácoras de muestras histopatológicas",
+      "Libros normativos (farmacia, BDS)",
+      "Impresión de Tarjetas de SBAR",
+      "Catalógo de Papelería Administrativa impreso",
+      "Etiquetas de sustancias químicas",
+      "Etiquetas de Trasvase",
+      "Etiquetas de Ropa limpia, sucia y contaminada",
+      "Etiquetas de mantenimiento de equipo biomédico",
+      "Etiqueta de Equipo biomédico fuera de servicio"
+    ]
+  }
+]

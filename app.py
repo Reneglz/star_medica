@@ -370,6 +370,45 @@ def resetear_password(uid):
     return redirect(url_for("usuarios"))
 
 
+@app.route("/admin/cargar-checklist")
+@rol_minimo("admin")
+def cargar_checklist_route():
+    """Carga única del Checklist 200 (15 proyectos con sus tareas).
+       Es idempotente: si un proyecto ya existe, lo salta (no duplica)."""
+    try:
+        from seed_checklist import CHECKLIST
+    except Exception as e:
+        return f"No encontré seed_checklist.py: {e}", 500
+    creados = tareas_tot = saltados = 0
+    for area in CHECKLIST:
+        if Session.scalar(select(Proyecto).where(Proyecto.nombre == area["nombre"])):
+            saltados += 1
+            continue
+        tareas = [{
+            "id": siguiente_id("tarea"), "nombre": nt, "descripcion": "",
+            "responsables": [], "fecha_inicio": area["fecha_inicio"],
+            "fecha_fin": area["fecha_fin"], "avance": 0, "estado": "planeado",
+            "prioridad": "media", "subtareas": []} for nt in area["tareas"]]
+        Session.add(Proyecto(
+            nombre=area["nombre"], tipo="general", prioridad="alta", estado="en_curso",
+            color=area["color"], descripcion=area.get("descripcion", ""),
+            fecha_inicio=area["fecha_inicio"], fecha_fin=area["fecha_fin"],
+            responsables="[]", tareas=json.dumps(tareas), comentarios="[]",
+            owner_id=current_user.id, area=area["nombre"]))
+        creados += 1
+        tareas_tot += len(tareas)
+    Session.commit()
+    return (
+        "<div style='font-family:sans-serif;max-width:480px;margin:60px auto;text-align:center'>"
+        "<h2 style='color:#059CDB'>✅ Checklist 200 cargado</h2>"
+        f"<p style='font-size:16px'>Proyectos creados: <b>{creados}</b><br>"
+        f"Tareas creadas: <b>{tareas_tot}</b>"
+        + (f"<br>Ya existían (saltados): <b>{saltados}</b>" if saltados else "")
+        + "</p><a href='/' style='display:inline-block;margin-top:16px;padding:12px 24px;"
+        "background:#059CDB;color:#fff;text-decoration:none;border-radius:8px;font-weight:700'>"
+        "← Ir al tablero</a></div>")
+
+
 # ════════════════════════════════════════════════════════════════════════
 #  API DE PROYECTOS
 # ════════════════════════════════════════════════════════════════════════
