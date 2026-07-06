@@ -1098,9 +1098,9 @@ body {
 
 .tarea-header {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
   cursor: pointer;
 }
 .tarea-header:hover { background: var(--dough1); }
@@ -1113,6 +1113,7 @@ body {
   font-size: 10px;
   transition: transform 0.15s;
   flex-shrink: 0;
+  margin-top: 3px;
 }
 .tarea-toggle.expanded { transform: rotate(90deg); color: var(--blue-dk); }
 .tarea-toggle.empty { visibility: hidden; }
@@ -1127,6 +1128,7 @@ body {
   background: white;
   font-size: 12px;
   color: white;
+  margin-top: 2px;
 }
 .tarea-check.checked {
   background: var(--green);
@@ -1139,21 +1141,28 @@ body {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   min-width: 0;
+  cursor: pointer;
 }
 .tarea-nombre {
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 700;
   color: var(--blue-dk);
-  line-height: 1.3;
+  line-height: 1.35;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  word-break: break-word;
 }
 .tarea-item.completada .tarea-nombre { text-decoration: line-through; color: var(--lava2); }
 .tarea-meta {
   display: flex;
   gap: 10px;
+  row-gap: 6px;
+  flex-wrap: wrap;
   align-items: center;
-  font-size: 10.5px;
+  font-size: 11.5px;
   color: var(--lava2);
 }
 .tarea-meta .barra {
@@ -1168,20 +1177,29 @@ body {
 }
 .tarea-acciones {
   display: flex;
-  gap: 4px;
+  gap: 6px;
   flex-shrink: 0;
+  align-self: flex-start;
+  margin-top: 2px;
 }
 .tarea-btn {
-  width: 28px; height: 28px;
+  width: 32px; height: 32px;
   border: none;
   border-radius: 6px;
   background: transparent;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 14px;
   display: grid; place-items: center;
   color: var(--lava2);
   transition: all 0.1s;
 }
+.tarea-btn.edit-lbl {
+  width: auto; padding: 0 12px; gap: 5px;
+  font-size: 12.5px; font-weight: 700;
+  color: var(--blue); background: var(--dough1);
+  border: 1px solid var(--dough3);
+}
+.tarea-btn.edit-lbl:hover { background: var(--blue); color: #fff; border-color: var(--blue); }
 .tarea-btn:hover { background: var(--dough2); color: var(--blue-dk); }
 .tarea-btn.del:hover { background: #ffebee; color: var(--red); }
 
@@ -1250,12 +1268,12 @@ body {
 }
 .mini-gantt-row {
   display: grid;
-  grid-template-columns: 200px 1fr;
+  grid-template-columns: 280px 1fr;
   gap: 10px;
   align-items: center;
-  padding: 6px 0;
+  padding: 8px 0;
   border-bottom: 1px solid var(--dough2);
-  min-height: 32px;
+  min-height: 34px;
 }
 .mini-gantt-row:last-child { border-bottom: none; }
 .mini-gantt-row.is-sub {
@@ -1263,12 +1281,12 @@ body {
   font-size: 11.5px;
 }
 .mini-gantt-label {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--blue-dk);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  line-height: 1.3;
+  word-break: break-word;
 }
 .mini-gantt-row.is-sub .mini-gantt-label {
   font-weight: 500;
@@ -2712,7 +2730,7 @@ function renderTareaItem(p, t) {
         <span class="tarea-toggle ${subs.length>0 ? (expandida?'expanded':'') : 'empty'}"
               onclick="event.stopPropagation();toggleTarea(${t.id})">▶</span>
         <div class="tarea-check ${completada?'checked':''}" onclick="event.stopPropagation();toggleCompletarTarea(${p.id}, ${t.id})"></div>
-        <div class="tarea-info">
+        <div class="tarea-info" onclick="event.stopPropagation();abrirEditarTarea(${p.id}, ${t.id})" title="Clic para editar">
           <div class="tarea-nombre">${esc(t.nombre)}</div>
           <div class="tarea-meta">
             ${avatarGrupoHTML(t.responsables, 3)}
@@ -2724,7 +2742,7 @@ function renderTareaItem(p, t) {
           </div>
         </div>
         <div class="tarea-acciones">
-          <button class="tarea-btn" onclick="event.stopPropagation();abrirEditarTarea(${p.id}, ${t.id})" title="Editar">✏️</button>
+          <button class="tarea-btn edit-lbl" onclick="event.stopPropagation();abrirEditarTarea(${p.id}, ${t.id})" title="Editar">✏️ Editar</button>
           <button class="tarea-btn del" onclick="event.stopPropagation();eliminarTarea(${p.id}, ${t.id})" title="Eliminar">🗑️</button>
         </div>
       </div>
