@@ -96,6 +96,8 @@ def get_marca():
         "logo_header":    (os.environ.get("MARCA_LOGO_HEADER")
                            or os.environ.get("MARCA_LOGO")
                            or "/static/img/logo_star_medica_blanco.png"),
+        # Imagen difuminada en la parte superior del login (vacío = sin imagen)
+        "banner":          os.environ.get("MARCA_BANNER", "/static/img/hospital.jpg"),
     }
 
 
