@@ -1,0 +1,3879 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>{{ marca.producto }} · {{ marca.nombre }}</title>
+<script>window.__BRAND__ = {{ marca_json|safe }};</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="{{ url_for('static', filename='js/xlsx.full.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/pptxgen.bundle.js') }}"></script>
+<script src="{{ url_for('static', filename='js/html2canvas.min.js') }}"></script>
+<style>
+:root {
+  /* Paleta de marca (editable desde variables) */
+  /* ── Paleta STAR MÉDICA (aproximada) ──────────────────────────────
+     Ajusta SOLO estos hex cuando tengas el manual de marca oficial.
+     Todo el tablero se recolorea automáticamente desde aquí.        */
+  --blue: #0B7FC4;           /* Azul institucional */
+  --blue-acc: #0A6FB0;       /* Azul accesible */
+  --blue-md: #075A8C;        /* Azul oscuro */
+  --blue-dk: #063C5E;        /* Azul profundo (header) */
+  --red: #E4002B;            /* Rojo alerta / cruz médica */
+  --red-brand: #E4002B;      /* Rojo marca */
+  --red-dk: #A30020;         /* Rojo oscuro */
+  --dough1: #F7FAFC;         /* Fondo clínico claro */
+  --dough2: #EDF3F8;         /* Fondo clínico 200 */
+  --dough3: #D8E5EF;         /* Bordes / divisores */
+  --lava1: #93A9BC;          /* Gris azulado */
+  --lava2: #5E7688;          /* Slate medio */
+  --lava3: #2E4456;          /* Slate oscuro */
+  --dark: #0F2A3F;           /* Texto principal */
+  --green: #00A9A5;          /* Verde-teal acento (estrella) */
+  --orange: #F2A200;         /* Ámbar acento */
+  --yellow: #FFC107;
+  --purple: #6C5CE7;
+  --teal: #00A9A5;
+
+  --r-sm: 8px; --r-md: 12px; --r-lg: 18px;
+  --shadow-card: 0 1px 2px rgba(0,0,0,.04), 0 4px 12px rgba(71,43,16,.06);
+  --shadow-elev: 0 4px 16px rgba(0,144,226,.15);
+  --shadow-modal: 0 20px 60px rgba(0,0,0,0.4);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Helvetica Neue', 'Segoe UI', system-ui, sans-serif;
+  background: linear-gradient(180deg, var(--dough1) 0%, var(--dough2) 100%);
+  color: var(--dark);
+  min-height: 100vh;
+  overflow-x: auto;   /* scroll horizontal cuando el Gantt es muy ancho */
+  overflow-y: auto;   /* scroll vertical cuando hay muchos proyectos */
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ─── HEADER ─── */
+.app-header {
+  background: linear-gradient(135deg, var(--header1) 0%, var(--header2) 100%);
+  color: white;
+  padding: 16px 28px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  box-shadow: 0 2px 8px rgba(0,61,107,0.25);
+  position: sticky; top: 0; z-index: 100;
+}
+.logo-img {
+  height: 40px; width: auto; max-width: 170px;
+  object-fit: contain;
+  filter: drop-shadow(0 1px 3px rgba(0,0,0,0.22));
+}
+.app-title {
+  font-size: 19px; font-weight: 800; letter-spacing: 0.3px;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.app-title small {
+  font-size: 10px; font-weight: 500; letter-spacing: 1.5px;
+  opacity: 0.75; text-transform: uppercase;
+}
+.proto-badge {
+  margin-left: auto;
+  background: linear-gradient(135deg, var(--red) 0%, var(--red-dk) 100%);
+  border: 1px solid var(--red-dk);
+  color: white;
+  padding: 8px 18px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(231,0,0,0.35);
+  transition: all 0.15s;
+}
+.proto-badge:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(231,0,0,0.5);
+}
+.user-tag {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12px;
+  background: rgba(255,255,255,0.1);
+  padding: 6px 14px;
+  border-radius: 20px;
+}
+.user-tag::before {
+  content: '★'; color: var(--yellow); font-size: 16px;
+}
+
+/* Notificación bell */
+.notif-bell {
+  position: relative;
+  width: 38px; height: 38px;
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 50%;
+  cursor: pointer;
+  display: grid; place-items: center;
+  font-size: 18px;
+  transition: background 0.15s;
+}
+.notif-bell:hover { background: rgba(255,255,255,0.25); }
+.notif-badge {
+  position: absolute;
+  top: -4px; right: -4px;
+  background: var(--red);
+  color: white;
+  font-size: 10px;
+  font-weight: 800;
+  min-width: 20px; height: 20px;
+  padding: 0 5px;
+  border-radius: 10px;
+  display: grid; place-items: center;
+  border: 2px solid var(--blue-dk);
+}
+.notif-panel {
+  position: absolute;
+  top: 60px; right: 28px;
+  width: 380px;
+  max-width: calc(100vw - 30px);
+  background: white;
+  border-radius: 14px;
+  box-shadow: var(--shadow-modal);
+  z-index: 200;
+  display: none;
+  max-height: 500px;
+  overflow: hidden;
+  flex-direction: column;
+}
+.notif-panel.open { display: flex; animation: slideDown 0.2s; }
+@keyframes slideDown { from { opacity:0; transform:translateY(-10px) } to { opacity:1; transform:translateY(0) } }
+
+.notif-panel-head {
+  padding: 14px 18px;
+  background: var(--dough2);
+  border-bottom: 1px solid var(--dough3);
+  font-weight: 800;
+  color: var(--blue-dk);
+  display: flex; align-items: center;
+  font-size: 14px;
+}
+.notif-panel-head button {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: var(--lava2);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+}
+.notif-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px;
+}
+.notif-item {
+  padding: 12px;
+  border-radius: 8px;
+  margin: 4px;
+  cursor: pointer;
+  display: flex;
+  gap: 10px;
+  border-left: 3px solid var(--blue);
+  background: var(--dough1);
+  transition: all 0.1s;
+}
+.notif-item:hover { background: var(--dough2); }
+.notif-item.unread { background: #fff3d5; border-left-color: var(--orange); }
+.notif-item.unread::after {
+  content: '';
+  width: 8px; height: 8px;
+  background: var(--red);
+  border-radius: 50%;
+  margin-left: auto;
+  margin-top: 4px;
+  flex-shrink: 0;
+}
+.notif-icon {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.notif-icon.tipo-comentario { background: #d0eaff; color: var(--blue-dk); }
+.notif-icon.tipo-asignado   { background: #fff3d5; color: #8f6c10; }
+.notif-icon.tipo-vencimiento{ background: #ffebee; color: var(--red-dk); }
+.notif-icon.tipo-cambio     { background: #e8f5e9; color: var(--green); }
+.notif-content {
+  flex: 1;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.notif-content b { color: var(--blue-dk); display: block; margin-bottom: 2px; }
+.notif-time {
+  color: var(--lava2);
+  font-size: 10px;
+  margin-top: 4px;
+}
+.notif-empty {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--lava2);
+  font-size: 12px;
+}
+
+/* ─── CONTENEDOR PRINCIPAL ─── */
+.container {
+  padding: 20px 28px 40px;
+  max-width: 1800px;
+  margin: 0 auto;
+}
+
+/* Stats */
+.stats-strip {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.stat-card {
+  background: white;
+  border-radius: var(--r-md);
+  padding: 14px 16px;
+  box-shadow: var(--shadow-card);
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.12s;
+}
+.stat-card:hover { transform: translateY(-2px); }
+.stat-card::before {
+  content: ''; position: absolute;
+  left: 0; top: 0; bottom: 0; width: 4px;
+}
+.stat-card.s-blue::before  { background: var(--blue); }
+.stat-card.s-orange::before{ background: var(--orange); }
+.stat-card.s-red::before   { background: var(--red); }
+.stat-card.s-green::before { background: var(--green); }
+.stat-card.s-purple::before{ background: var(--purple); }
+.stat-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--lava2);
+  text-transform: uppercase;
+}
+.stat-value {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--blue-dk);
+  margin-top: 2px;
+  font-variant-numeric: tabular-nums;
+}
+.stat-detail {
+  font-size: 10.5px;
+  color: var(--lava2);
+}
+
+/* Toolbar (filtros + acciones) */
+.toolbar {
+  background: white;
+  border-radius: var(--r-md);
+  padding: 14px 18px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow-card);
+}
+.toolbar-search {
+  flex: 1;
+  min-width: 220px;
+  padding: 9px 14px 9px 36px;
+  border: 1px solid var(--dough3);
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  background: var(--dough1) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238F6C49' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><circle cx='11' cy='11' r='8'/><line x1='21' y1='21' x2='16.65' y2='16.65'/></svg>") no-repeat 12px center;
+}
+.toolbar-search:focus { border-color: var(--blue); background-color: white; }
+
+.toolbar select {
+  padding: 9px 12px;
+  border: 1px solid var(--dough3);
+  border-radius: 8px;
+  font-size: 12px;
+  font-family: inherit;
+  background: white;
+  color: var(--blue-dk);
+  cursor: pointer;
+  font-weight: 600;
+  outline: none;
+}
+
+.btn {
+  padding: 9px 16px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.12s;
+  white-space: nowrap;
+}
+.btn-primary {
+  background: linear-gradient(135deg, var(--blue) 0%, var(--blue-md) 100%);
+  color: white;
+}
+.btn-primary:hover { box-shadow: var(--shadow-elev); transform: translateY(-1px); }
+.btn-red {
+  background: linear-gradient(135deg, var(--red) 0%, var(--red-dk) 100%);
+  color: white;
+}
+.btn-secondary {
+  background: white;
+  color: var(--blue-dk);
+  border: 1px solid var(--dough3);
+}
+.btn-secondary:hover { background: var(--dough2); }
+.btn-ghost {
+  background: transparent;
+  color: var(--lava2);
+}
+.btn-ghost:hover { background: var(--dough2); color: var(--blue-dk); }
+
+/* Tabs de vista */
+.view-tabs {
+  display: flex;
+  background: white;
+  border-radius: var(--r-md);
+  padding: 6px;
+  gap: 3px;
+  box-shadow: var(--shadow-card);
+  margin-bottom: 14px;
+}
+.view-tab {
+  padding: 10px 18px;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  border-radius: 8px;
+  color: var(--lava2);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  user-select: none;
+}
+.view-tab:hover:not(.active) { background: var(--dough2); color: var(--blue-dk); }
+.view-tab.active {
+  background: linear-gradient(135deg, var(--blue) 0%, var(--blue-md) 100%);
+  color: white;
+  box-shadow: var(--shadow-elev);
+}
+
+/* ─── VIEWS ─── */
+.view-panel {
+  background: white;
+  border-radius: var(--r-lg);
+  padding: 0;
+  box-shadow: var(--shadow-card);
+  display: none;
+  overflow: hidden;
+}
+.view-panel.active { display: block; }
+
+/* LISTA */
+.tbl-wrap { overflow-x: auto; }
+.tbl-proyectos {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+.tbl-proyectos th {
+  background: var(--blue-dk);
+  color: white;
+  padding: 12px 14px;
+  text-align: left;
+  font-weight: 700;
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  position: sticky; top: 0;
+  white-space: nowrap;
+}
+.tbl-proyectos td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--dough3);
+  vertical-align: middle;
+}
+.tbl-proyectos tr { transition: background 0.1s; cursor: pointer; }
+.tbl-proyectos tr:hover { background: var(--dough2); }
+.tbl-proyectos td:first-child { padding-left: 18px; }
+
+/* Tags de estado/tipo/prioridad */
+.tag {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+.tag.estado-planeado    { background: #e3f2fd; color: var(--blue-dk); }
+.tag.estado-en_curso    { background: #fff3d5; color: #8f6c10; }
+.tag.estado-atrasado    { background: #ffebee; color: var(--red-dk); }
+.tag.estado-completado  { background: #e8f5e9; color: #1b5e20; }
+.tag.estado-cancelado   { background: #f5f5f5; color: #757575; }
+.tag.tipo-general       { background: #f3e5f5; color: var(--purple); }
+.tag.tipo-tienda        { background: #d4f5dc; color: #0a6020; }
+.tag.tipo-auditoria     { background: #fff8e1; color: #8f6c10; }
+.tag.prio-baja          { background: #f5f5f5; color: #757575; }
+.tag.prio-media         { background: #e3f2fd; color: var(--blue-md); }
+.tag.prio-alta          { background: #fff3d5; color: #8f6c10; }
+.tag.prio-critica       { background: #ffebee; color: var(--red-dk); }
+
+/* Avance bar */
+.avance-bar {
+  width: 100%;
+  height: 8px;
+  background: var(--dough3);
+  border-radius: 4px;
+  position: relative;
+  overflow: hidden;
+}
+.avance-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+.avance-text {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--blue-dk);
+  margin-top: 3px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Avatar / responsable */
+.avatar-mini {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--blue) 0%, var(--blue-md) 100%);
+  color: white;
+  display: inline-grid; place-items: center;
+  font-size: 11px;
+  font-weight: 800;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+.avatar-mini.color-1 { background: linear-gradient(135deg, var(--red) 0%, var(--red-dk) 100%); }
+.avatar-mini.color-2 { background: linear-gradient(135deg, var(--green) 0%, #0a8040 100%); }
+.avatar-mini.color-3 { background: linear-gradient(135deg, var(--orange) 0%, #c46a00 100%); }
+.avatar-mini.color-4 { background: linear-gradient(135deg, var(--purple) 0%, #5e2a82 100%); }
+.avatar-mini.color-5 { background: linear-gradient(135deg, var(--teal) 0%, #0d6e5c 100%); }
+
+/* ─── GANTT ─── */
+.gantt-wrap {
+  padding: 18px;
+  overflow-x: auto;
+  background: var(--dough1);
+}
+.gantt-controls {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+  align-items: center;
+  font-size: 12px;
+}
+.gantt-zoom-btn {
+  padding: 5px 10px;
+  background: white;
+  border: 1px solid var(--dough3);
+  border-radius: 6px;
+  font-size: 11px;
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--blue-dk);
+  font-family: inherit;
+}
+.gantt-zoom-btn.active {
+  background: var(--blue-dk); color: white; border-color: var(--blue-dk);
+}
+
+.gantt-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.gantt-table th, .gantt-table td {
+  padding: 0;
+  border: 1px solid var(--dough3);
+  font-size: 11px;
+}
+.gantt-table thead th {
+  background: var(--blue-dk);
+  color: white;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 0.4px;
+  position: sticky;
+  top: 0;
+}
+.gantt-table thead th:first-child {
+  text-align: left;
+  padding-left: 14px;
+  min-width: 250px;
+  background: var(--blue-dk);
+}
+.gantt-cell-name {
+  padding: 10px 14px !important;
+  font-weight: 600;
+  background: var(--dough2);
+  font-size: 12px;
+  color: var(--blue-dk);
+  white-space: nowrap;
+}
+.gantt-day {
+  height: 44px;
+  position: relative;
+  background: white;
+}
+.gantt-day.weekend { background: var(--dough2); }
+.gantt-day.today {
+  background: rgba(231,0,0,0.06);
+  border-left: 2px solid var(--red);
+  border-right: 2px solid var(--red);
+}
+.gantt-day.month-start {
+  border-left: 2px solid var(--blue);
+}
+.gantt-bar {
+  position: absolute;
+  top: 8px;
+  height: 28px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  color: white;
+  font-size: 10.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  z-index: 2;
+  cursor: pointer;
+  transition: filter 0.12s, transform 0.12s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.gantt-bar:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  z-index: 3;
+}
+.gantt-bar-fill {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  background: rgba(255,255,255,0.25);
+  border-radius: 6px 0 0 6px;
+}
+.gantt-bar-text {
+  position: relative; z-index: 1;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  display: flex; align-items: center;
+  gap: 4px;
+}
+.gantt-dependency-line {
+  stroke: var(--lava2);
+  stroke-width: 1.5;
+  fill: none;
+  stroke-dasharray: 3 3;
+  pointer-events: none;
+}
+
+/* Sub-encabezado de meses en gantt */
+.gantt-month-header th {
+  background: var(--blue-md);
+  font-size: 11.5px;
+  padding: 8px 4px;
+  text-transform: uppercase;
+}
+
+/* ─── KANBAN ─── */
+.kanban-wrap {
+  padding: 18px;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 14px;
+  min-height: 500px;
+  background: var(--dough1);
+}
+.kanban-col {
+  background: white;
+  border-radius: var(--r-md);
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+.kanban-col-head {
+  padding: 12px 14px;
+  border-radius: var(--r-md) var(--r-md) 0 0;
+  color: white;
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.kanban-col-head .count {
+  margin-left: auto;
+  background: rgba(255,255,255,0.25);
+  padding: 2px 9px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 800;
+}
+.kanban-col[data-estado="planeado"]    .kanban-col-head { background: var(--blue); }
+.kanban-col[data-estado="en_curso"]    .kanban-col-head { background: var(--orange); }
+.kanban-col[data-estado="atrasado"]    .kanban-col-head { background: var(--red); }
+.kanban-col[data-estado="completado"]  .kanban-col-head { background: var(--green); }
+.kanban-col[data-estado="cancelado"]   .kanban-col-head { background: #757575; }
+
+.kanban-col-body {
+  flex: 1;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  max-height: 600px;
+}
+.kanban-card {
+  background: var(--dough1);
+  border-radius: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  border-left: 4px solid var(--blue);
+  transition: all 0.12s;
+  position: relative;
+}
+.kanban-card:hover {
+  background: white;
+  box-shadow: var(--shadow-card);
+  transform: translateY(-1px);
+}
+.kanban-card-title {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--blue-dk);
+  margin-bottom: 6px;
+  line-height: 1.3;
+}
+.kanban-card-meta {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 10.5px;
+  color: var(--lava2);
+  margin-bottom: 6px;
+}
+.kanban-card-foot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+/* ─── MODAL ─── */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.55);
+  z-index: 1000;
+  display: none;
+  align-items: center; justify-content: center;
+  padding: 20px;
+}
+.modal-overlay.open { display: flex; animation: fadeIn 0.2s; }
+@keyframes fadeIn { from { opacity:0 } to { opacity:1 } }
+
+.modal {
+  background: white;
+  width: 720px;
+  max-width: 100%;
+  max-height: 90vh;
+  height: auto;
+  border-radius: 16px;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+  box-shadow: var(--shadow-modal);
+  animation: zoomIn 0.2s;
+}
+.modal-lg { width: 920px; max-height: 90vh; }
+@keyframes zoomIn { from { opacity:0; transform:scale(0.95) } to { opacity:1; transform:scale(1) } }
+
+.modal-head {
+  background: linear-gradient(135deg, var(--blue-dk) 0%, var(--blue-md) 100%);
+  color: white;
+  padding: 16px 22px;
+  display: flex; align-items: center; gap: 14px;
+}
+.modal-head h2 { font-size: 16px; flex: 1; font-weight: 700; }
+.modal-close {
+  background: rgba(255,255,255,0.15);
+  border: none;
+  color: white;
+  font-size: 22px;
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: grid; place-items: center;
+}
+.modal-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 22px;
+  background: var(--dough1);
+  /* Scrollbar siempre visible y estilizado */
+  scrollbar-width: thin;
+  scrollbar-color: var(--blue-md) var(--dough2);
+}
+.modal-body::-webkit-scrollbar {
+  width: 10px;
+}
+.modal-body::-webkit-scrollbar-track {
+  background: var(--dough2);
+  border-radius: 5px;
+}
+.modal-body::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--blue) 0%, var(--blue-md) 100%);
+  border-radius: 5px;
+  border: 2px solid var(--dough2);
+}
+.modal-body::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, var(--blue-md) 0%, var(--blue-dk) 100%);
+}
+.modal-actions {
+  padding: 14px 22px;
+  border-top: 1px solid var(--dough3);
+  background: white;
+  display: flex; gap: 10px; justify-content: flex-end;
+}
+
+/* Form controls */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 16px;
+}
+.form-grid .full { grid-column: 1 / -1; }
+.form-field {
+  display: flex; flex-direction: column;
+  gap: 4px;
+}
+.form-field label {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--lava2);
+}
+.form-field input,
+.form-field select,
+.form-field textarea {
+  padding: 10px 12px;
+  border: 1px solid var(--dough3);
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: inherit;
+  background: white;
+  outline: none;
+  color: var(--dark);
+}
+.form-field input:focus,
+.form-field select:focus,
+.form-field textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(0,144,226,0.15); }
+.form-field textarea { resize: vertical; min-height: 70px; }
+
+/* Modal Detalle (con tabs) */
+.detail-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--dough3);
+  background: white;
+  padding: 0 22px;
+  gap: 4px;
+}
+.detail-tab {
+  padding: 12px 16px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  color: var(--lava2);
+  border-bottom: 3px solid transparent;
+  margin-bottom: -1px;
+}
+.detail-tab.active {
+  color: var(--blue-dk);
+  border-bottom-color: var(--blue);
+}
+.detail-tab:hover:not(.active) { color: var(--blue-md); }
+.detail-content {
+  flex: 1;            /* ocupa el alto restante dentro del modal (flex column) */
+  min-height: 0;      /* CLAVE en flexbox: permite que el hijo se encoja y active el scroll */
+  overflow: auto;     /* barra vertical y/o horizontal solo cuando hace falta */
+  padding: 18px 22px;
+}
+.detail-content > div { display: none; }
+.detail-content > div.active { display: block; }
+
+/* Info grid en detalle */
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.info-cell {
+  background: var(--dough2);
+  padding: 10px 12px;
+  border-radius: 8px;
+  border-left: 3px solid var(--blue);
+}
+.info-cell .lbl {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: var(--lava2);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+.info-cell .val {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--blue-dk);
+  margin-top: 3px;
+}
+
+/* Comentarios */
+.comentarios-list {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 280px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.comentario {
+  display: flex;
+  gap: 10px;
+  background: var(--dough2);
+  padding: 10px 12px;
+  border-radius: 10px;
+}
+.comentario-content { flex: 1; }
+.comentario-head {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  margin-bottom: 4px;
+}
+.comentario-autor {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--blue-dk);
+}
+.comentario-time {
+  font-size: 10.5px;
+  color: var(--lava2);
+}
+.comentario-texto {
+  font-size: 12.5px;
+  color: var(--dark);
+  line-height: 1.5;
+}
+.comentario-input-wrap {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+.comentario-input {
+  flex: 1;
+  padding: 10px 14px;
+  border: 1px solid var(--dough3);
+  border-radius: 22px;
+  font-size: 12.5px;
+  font-family: inherit;
+  outline: none;
+  background: var(--dough1);
+}
+.comentario-input:focus { background: white; border-color: var(--blue); }
+
+/* Dependencias visuales en detalle */
+.dep-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.dep-item {
+  background: var(--dough2);
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  border-left: 3px solid var(--orange);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dep-item .arrow { color: var(--orange); font-size: 14px; }
+
+/* Importar Excel */
+.excel-dropzone {
+  border: 2px dashed var(--lava1);
+  border-radius: 12px;
+  padding: 40px 20px;
+  text-align: center;
+  background: var(--dough2);
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.excel-dropzone:hover {
+  border-color: var(--blue);
+  background: #e3f2fd;
+}
+.excel-dropzone .icon { font-size: 48px; margin-bottom: 10px; }
+.excel-dropzone .txt { font-size: 14px; font-weight: 700; color: var(--blue-dk); }
+.excel-dropzone .sub { font-size: 11.5px; color: var(--lava2); margin-top: 4px; }
+.excel-preview {
+  max-height: 300px;
+  overflow-y: auto;
+  margin-top: 14px;
+  border: 1px solid var(--dough3);
+  border-radius: 8px;
+}
+.excel-preview table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+.excel-preview th {
+  background: var(--blue-dk);
+  color: white;
+  padding: 8px;
+  text-align: left;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.excel-preview td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--dough3);
+}
+
+/* Empty state */
+.empty {
+  text-align: center;
+  color: var(--lava2);
+  padding: 60px 20px;
+  font-size: 13px;
+}
+.empty .em-icon { font-size: 48px; margin-bottom: 12px; }
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: 26px; left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  background: var(--blue-dk);
+  color: white;
+  padding: 14px 24px;
+  border-radius: 30px;
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: var(--shadow-modal);
+  z-index: 2000;
+  opacity: 0;
+  transition: all 0.3s;
+  pointer-events: none;
+  display: flex; align-items: center; gap: 8px;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast.success { background: var(--green); }
+.toast.error { background: var(--red); }
+
+/* ─── AVATAR STACK (múltiples responsables) ─── */
+.avatar-stack {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+}
+
+/* ─── MULTI-SELECT DE RESPONSABLES ─── */
+.multi-resp {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--dough3);
+  border-radius: 8px;
+  background: white;
+  min-height: 44px;
+  align-items: center;
+}
+.multi-resp-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--dough2);
+  border: 1.5px solid var(--dough3);
+  border-radius: 12px;
+  padding: 5px 12px 5px 5px;
+  font-size: 11.5px;
+  color: var(--blue-dk);
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.12s;
+  min-height: 36px;
+}
+.multi-resp-chip.selected {
+  background: linear-gradient(135deg, var(--blue) 0%, var(--blue-md) 100%);
+  color: white;
+  border-color: var(--blue-dk);
+  box-shadow: 0 2px 6px rgba(0,144,226,0.3);
+}
+.multi-resp-chip:hover { transform: translateY(-1px); box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+.multi-resp-chip.selected:hover { transform: translateY(-1px); }
+
+/* ─── LISTA DE TAREAS ─── */
+.tareas-toolbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+  padding: 10px 14px;
+  background: var(--dough2);
+  border-radius: 10px;
+}
+.tareas-stats {
+  display: flex;
+  gap: 14px;
+  font-size: 11.5px;
+  color: var(--lava2);
+  flex: 1;
+}
+.tareas-stats b { color: var(--blue-dk); }
+.tareas-stats span.crit { color: var(--red); font-weight: 700; }
+
+.tareas-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 500px;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.tarea-item {
+  background: white;
+  border: 1px solid var(--dough3);
+  border-radius: 10px;
+  overflow: hidden;
+  border-left: 4px solid var(--blue);
+  transition: box-shadow 0.12s;
+}
+.tarea-item.completada { border-left-color: var(--green); opacity: 0.8; }
+.tarea-item.atrasada   { border-left-color: var(--red); }
+.tarea-item.planeada   { border-left-color: var(--lava1); }
+
+.tarea-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+}
+.tarea-header:hover { background: var(--dough1); }
+
+.tarea-toggle {
+  width: 18px; height: 18px;
+  display: grid; place-items: center;
+  cursor: pointer;
+  color: var(--lava2);
+  font-size: 10px;
+  transition: transform 0.15s;
+  flex-shrink: 0;
+}
+.tarea-toggle.expanded { transform: rotate(90deg); color: var(--blue-dk); }
+.tarea-toggle.empty { visibility: hidden; }
+
+.tarea-check {
+  width: 20px; height: 20px;
+  border: 2px solid var(--lava1);
+  border-radius: 5px;
+  display: grid; place-items: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  background: white;
+  font-size: 12px;
+  color: white;
+}
+.tarea-check.checked {
+  background: var(--green);
+  border-color: var(--green);
+}
+.tarea-check.checked::after { content: '✓'; }
+.tarea-check:hover { border-color: var(--blue); }
+
+.tarea-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.tarea-nombre {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--blue-dk);
+  line-height: 1.3;
+}
+.tarea-item.completada .tarea-nombre { text-decoration: line-through; color: var(--lava2); }
+.tarea-meta {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-size: 10.5px;
+  color: var(--lava2);
+}
+.tarea-meta .barra {
+  width: 80px; height: 5px;
+  background: var(--dough3);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.tarea-meta .barra-fill {
+  height: 100%;
+  border-radius: 3px;
+}
+.tarea-acciones {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.tarea-btn {
+  width: 28px; height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  font-size: 13px;
+  display: grid; place-items: center;
+  color: var(--lava2);
+  transition: all 0.1s;
+}
+.tarea-btn:hover { background: var(--dough2); color: var(--blue-dk); }
+.tarea-btn.del:hover { background: #ffebee; color: var(--red); }
+
+/* Subtareas */
+.subtareas-wrap {
+  background: var(--dough1);
+  border-top: 1px solid var(--dough3);
+  display: none;
+  padding: 6px 10px 10px 38px;
+}
+.subtareas-wrap.open { display: block; }
+
+.subtarea-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px;
+  border-radius: 6px;
+  margin-top: 4px;
+  font-size: 12px;
+  background: white;
+  border-left: 3px solid var(--lava1);
+}
+.subtarea-row.completada { border-left-color: var(--green); opacity: 0.75; }
+.subtarea-row.atrasada   { border-left-color: var(--red); }
+.subtarea-row .nombre {
+  flex: 1;
+  font-weight: 600;
+  color: var(--dark);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.subtarea-row.completada .nombre { text-decoration: line-through; color: var(--lava2); }
+.subtarea-row .fechas {
+  font-size: 10px;
+  color: var(--lava2);
+  white-space: nowrap;
+}
+
+.btn-add-sub {
+  margin-top: 6px;
+  background: transparent;
+  border: 1px dashed var(--lava1);
+  color: var(--lava2);
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 600;
+  width: 100%;
+  display: flex; align-items: center; justify-content: center; gap: 4px;
+}
+.btn-add-sub:hover { border-color: var(--blue); color: var(--blue); background: var(--dough1); }
+
+/* Mini-Gantt dentro del tab Tareas */
+.mini-gantt {
+  background: white;
+  border-radius: 10px;
+  border: 1px solid var(--dough3);
+  padding: 12px;
+  margin-bottom: 14px;
+  overflow-x: auto;
+}
+.mini-gantt-row {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 10px;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--dough2);
+  min-height: 32px;
+}
+.mini-gantt-row:last-child { border-bottom: none; }
+.mini-gantt-row.is-sub {
+  padding-left: 24px;
+  font-size: 11.5px;
+}
+.mini-gantt-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--blue-dk);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mini-gantt-row.is-sub .mini-gantt-label {
+  font-weight: 500;
+  color: var(--dark);
+}
+.mini-gantt-track {
+  position: relative;
+  height: 22px;
+  background: var(--dough2);
+  border-radius: 4px;
+}
+.mini-gantt-bar {
+  position: absolute;
+  top: 2px;
+  height: 18px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  padding: 0 6px;
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  overflow: hidden;
+  cursor: pointer;
+  transition: filter 0.1s;
+}
+.mini-gantt-bar:hover { filter: brightness(1.15); }
+.mini-gantt-bar-fill {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  background: rgba(255,255,255,0.3);
+  border-radius: 4px 0 0 4px;
+}
+.mini-gantt-today {
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 2px;
+  background: var(--red);
+  z-index: 5;
+}
+
+/* Botones del tab tareas */
+.btn-add-tarea {
+  background: linear-gradient(135deg, var(--blue) 0%, var(--blue-md) 100%);
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn-add-tarea:hover { box-shadow: var(--shadow-elev); }
+
+/* Bloqueo visual del avance del proyecto cuando es auto */
+.field-locked {
+  position: relative;
+  opacity: 0.7;
+  pointer-events: none;
+}
+.field-locked::after {
+  content: '🔒 Auto-calculado desde tareas';
+  position: absolute;
+  bottom: -16px; left: 0;
+  font-size: 10px;
+  color: var(--lava2);
+  font-weight: 600;
+}
+
+/* Scrollbars */
+/* ═══════════════════════════════════════════════════════════════════
+   SCROLLBARS GLOBALES (toda la página y elementos genéricos)
+   Estilo de marca — gradiente principal
+   ═══════════════════════════════════════════════════════════════════ */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: var(--blue-md) var(--dough2);
+}
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+::-webkit-scrollbar-track {
+  background: var(--dough2);
+  border-radius: 6px;
+}
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--blue) 0%, var(--blue-md) 100%);
+  border-radius: 6px;
+  border: 2px solid var(--dough2);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, var(--blue-md) 0%, var(--blue-dk) 100%);
+}
+::-webkit-scrollbar-corner {
+  background: var(--dough2);
+}
+
+/* Responsive */
+@media (max-width: 1100px) {
+  .stats-strip { grid-template-columns: repeat(3, 1fr); }
+  .kanban-wrap { grid-template-columns: 1fr; }
+  .form-grid { grid-template-columns: 1fr; }
+  .info-grid { grid-template-columns: 1fr; }
+}
+</style>
+<style>:root{--blue:{{ marca.primario }};--blue-dk:{{ marca.primario_oscuro }};--green:{{ marca.acento }};--teal:{{ marca.acento }};--header1:{{ marca.header }};--header2:{{ marca.header2 }};}</style>
+</head>
+<body>
+
+<header class="app-header">
+  <img class="logo-img" id="header-logo" alt="{{ marca.nombre }}">
+  <div class="app-title">
+    <span>📋 {{ marca.producto|upper }}</span>
+    <small>{{ marca.tagline }} · {{ marca.nombre }}</small>
+  </div>
+  <div class="user-tag" style="margin-left:auto">{{ rol }} · {{ nombre }}</div>
+  {% if rol == 'admin' %}
+  <div class="proto-badge" onclick="window.location.href='/usuarios'" title="Administrar usuarios y roles" style="background:linear-gradient(135deg,var(--green) 0%,#008a86 100%);border-color:#008a86;box-shadow:0 2px 8px rgba(0,169,165,.35)">👥 Usuarios</div>
+  {% endif %}
+  <div class="proto-badge" onclick="window.location.href='/logout'" title="Cerrar sesión">⎋ Salir</div>
+  <div class="notif-bell" id="notif-bell" onclick="toggleNotif()">
+    🔔
+    <span class="notif-badge" id="notif-badge">0</span>
+  </div>
+</header>
+
+<div class="notif-panel" id="notif-panel">
+  <div class="notif-panel-head">
+    🔔 Notificaciones
+    <button onclick="marcarTodasLeidas()">Marcar todas leídas</button>
+  </div>
+  <div class="notif-list" id="notif-list"></div>
+</div>
+
+<div class="container">
+
+  <section class="stats-strip" id="stats-strip"></section>
+
+  <div class="toolbar">
+    <input type="text" class="toolbar-search" id="search" placeholder="Buscar por nombre, responsable, descripción...">
+    <select id="filter-estado">
+      <option value="">Todos los estados</option>
+      <option value="planeado">Planeado</option>
+      <option value="en_curso">En curso</option>
+      <option value="atrasado">Atrasado</option>
+      <option value="completado">Completado</option>
+      <option value="cancelado">Cancelado</option>
+    </select>
+    <select id="filter-tipo">
+      <option value="">Todos los tipos</option>
+      <option value="general">General</option>
+      <option value="tienda">Por tienda</option>
+      <option value="auditoria">Auditoría</option>
+    </select>
+    <select id="filter-responsable">
+      <option value="">Todos los responsables</option>
+    </select>
+    <button class="btn btn-secondary" onclick="abrirImportExcel()">📥 Importar Excel</button>
+    <button class="btn btn-secondary" onclick="exportarExcel()">📤 Excel</button>
+    <button class="btn btn-secondary" onclick="descargarPPTEjecutivo()" title="Reporte ejecutivo en PowerPoint">📊 PPT</button>
+    <button class="btn btn-red" onclick="abrirCrear()">＋ Nuevo proyecto</button>
+  </div>
+
+  <div class="view-tabs">
+    <div class="view-tab active" data-view="lista"><span>📋</span> Lista</div>
+    <div class="view-tab" data-view="gantt"><span>📊</span> Gantt</div>
+    <div class="view-tab" data-view="kanban"><span>🗂️</span> Kanban</div>
+  </div>
+
+  <!-- VISTA LISTA -->
+  <section class="view-panel active" id="view-lista">
+    <div class="tbl-wrap">
+      <table class="tbl-proyectos" id="tbl-proyectos">
+        <thead>
+          <tr>
+            <th onclick="sortBy('nombre')">Proyecto ↕</th>
+            <th>Tipo</th>
+            <th>Responsable</th>
+            <th onclick="sortBy('fecha_inicio')">Inicio ↕</th>
+            <th onclick="sortBy('fecha_fin')">Fin ↕</th>
+            <th>Avance</th>
+            <th>Estado</th>
+            <th>Prioridad</th>
+          </tr>
+        </thead>
+        <tbody id="tbody-proyectos"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- VISTA GANTT -->
+  <section class="view-panel" id="view-gantt">
+    <div class="gantt-wrap">
+      <div class="gantt-controls">
+        <span style="color:var(--lava2);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px">Zoom:</span>
+        <button class="gantt-zoom-btn" onclick="setGanttZoom('semanas')" data-zoom="semanas">SEMANAS</button>
+        <button class="gantt-zoom-btn active" onclick="setGanttZoom('dias')" data-zoom="dias">DÍAS</button>
+        <button class="gantt-zoom-btn" onclick="setGanttZoom('meses')" data-zoom="meses">MESES</button>
+        <span style="margin-left:14px;color:var(--lava2);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px">Vista:</span>
+        <button class="gantt-zoom-btn" onclick="expandirTodoGantt()">▼ Expandir todo</button>
+        <button class="gantt-zoom-btn" onclick="colapsarTodoGantt()">▶ Colapsar todo</button>
+        <span style="margin-left:auto;font-size:11px;color:var(--lava2)">
+          <span style="display:inline-block;width:10px;height:10px;background:var(--red);vertical-align:middle;margin-right:4px"></span>Hoy
+          <span style="margin-left:14px;display:inline-block;width:14px;height:8px;background:var(--blue);border-radius:3px;vertical-align:middle;margin-right:4px"></span>Proyecto
+          <span style="margin-left:10px;display:inline-block;width:12px;height:6px;background:var(--blue);border-radius:2px;opacity:0.85;vertical-align:middle;margin-right:4px"></span>Tarea
+          <span style="margin-left:10px;display:inline-block;width:10px;height:5px;background:var(--blue);border-radius:2px;opacity:0.7;vertical-align:middle;margin-right:4px"></span>Subtarea
+        </span>
+      </div>
+      <div id="gantt-container"></div>
+    </div>
+  </section>
+
+  <!-- VISTA KANBAN -->
+  <section class="view-panel" id="view-kanban">
+    <div class="kanban-wrap" id="kanban-wrap"></div>
+  </section>
+
+</div>
+
+<!-- MODAL CREAR/EDITAR -->
+<div class="modal-overlay" id="modal-edit">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="modal-edit-title">＋ Nuevo proyecto</h2>
+      <button class="modal-close" onclick="cerrarModal('modal-edit')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-field full">
+          <label>Nombre del proyecto *</label>
+          <input type="text" id="f-nombre" placeholder="Ej: Implementar nuevo sistema de inventarios Q3">
+        </div>
+        <div class="form-field">
+          <label>Tipo</label>
+          <select id="f-tipo">
+            <option value="general">General</option>
+            <option value="tienda">Por tienda</option>
+            <option value="auditoria">Auditoría</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label>Prioridad</label>
+          <select id="f-prioridad">
+            <option value="baja">Baja</option>
+            <option value="media" selected>Media</option>
+            <option value="alta">Alta</option>
+            <option value="critica">Crítica</option>
+          </select>
+        </div>
+        <div class="form-field full">
+          <label>Responsables (click para seleccionar varios)</label>
+          <div class="multi-resp" id="f-multi-resp"></div>
+        </div>
+        <div class="form-field">
+          <label>Fecha inicio *</label>
+          <input type="date" id="f-fecha-inicio">
+        </div>
+        <div class="form-field">
+          <label>Fecha fin *</label>
+          <input type="date" id="f-fecha-fin">
+        </div>
+        <div class="form-field" id="f-avance-wrap">
+          <label>Avance %</label>
+          <input type="number" id="f-avance" min="0" max="100" value="0">
+        </div>
+        <div class="form-field">
+          <label>Estado</label>
+          <select id="f-estado">
+            <option value="planeado">Planeado</option>
+            <option value="en_curso">En curso</option>
+            <option value="atrasado">Atrasado</option>
+            <option value="completado">Completado</option>
+            <option value="cancelado">Cancelado</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label>Color en Gantt</label>
+          <input type="color" id="f-color" value="#0090E2">
+        </div>
+        <div class="form-field full">
+          <label>Depende de (opcional)</label>
+          <select id="f-depende"></select>
+        </div>
+        <div class="form-field full">
+          <label>Descripción</label>
+          <textarea id="f-descripcion" placeholder="Detalles del proyecto, objetivos, contexto..."></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="cerrarModal('modal-edit')">Cancelar</button>
+      <button class="btn btn-red" id="btn-eliminar" onclick="eliminarProyecto()" style="display:none">🗑️ Eliminar</button>
+      <button class="btn btn-primary" onclick="guardarProyecto()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DETALLE -->
+<div class="modal-overlay" id="modal-detalle">
+  <div class="modal modal-lg">
+    <div class="modal-head">
+      <h2 id="detalle-title">Proyecto</h2>
+      <button class="btn btn-secondary" onclick="abrirNotificar('proyecto')" style="margin-right:6px" title="Notificar a responsables">📤 Notificar</button>
+      <button class="btn btn-secondary" onclick="descargarPPTProyecto()" style="margin-right:6px" title="Descargar PPT del proyecto">📊 PPT</button>
+      <button class="btn btn-secondary" onclick="editarDesdeDetalle()" style="margin-right:8px">✏️ Editar</button>
+      <button class="modal-close" onclick="cerrarModal('modal-detalle')">×</button>
+    </div>
+    <div class="detail-tabs">
+      <div class="detail-tab active" data-dt="info">📋 Información</div>
+      <div class="detail-tab" data-dt="tareas">📝 Tareas <span id="dt-tar-count"></span></div>
+      <div class="detail-tab" data-dt="comentarios">💬 Comentarios <span id="dt-com-count"></span></div>
+      <div class="detail-tab" data-dt="dependencias">🔗 Dependencias</div>
+    </div>
+    <div class="detail-content">
+      <div id="dt-info" class="active"></div>
+      <div id="dt-tareas"></div>
+      <div id="dt-comentarios"></div>
+      <div id="dt-dependencias"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL NOTIFICAR responsables (correo + WhatsApp) -->
+<div class="modal-overlay" id="modal-notificar">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>📤 Notificar a responsables</h2>
+      <button class="modal-close" onclick="cerrarModal('modal-notificar')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-field">
+        <label>Destinatarios</label>
+        <div id="notif-dest" style="display:flex;flex-wrap:wrap;gap:6px;background:var(--dough2);padding:10px;border-radius:8px"></div>
+      </div>
+      <div class="form-field" style="margin-top:14px">
+        <label>Asunto</label>
+        <input type="text" id="notif-asunto" placeholder="Asunto del mensaje">
+      </div>
+      <div class="form-field" style="margin-top:10px">
+        <label>Mensaje</label>
+        <textarea id="notif-mensaje" rows="6" style="width:100%;padding:10px 12px;border:1px solid var(--dough3);border-radius:8px;font-family:inherit;font-size:13px;resize:vertical"></textarea>
+      </div>
+      <div style="background:#fff8e1;border-left:3px solid var(--yellow);padding:10px 12px;border-radius:6px;margin-top:14px;font-size:11.5px;line-height:1.5">
+        <b>ℹ️ ¿Cómo funciona?</b><br>
+        • <b>📧 Correo</b>: abre tu Outlook con el mensaje pre-llenado a todos los destinatarios<br>
+        • <b>💬 WhatsApp</b>: abre 1 chat por persona con el mensaje listo para enviar<br>
+        <i style="color:var(--lava2)">En producción, el correo se enviará automáticamente vía Outlook corporativo.</i>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="cerrarModal('modal-notificar')">Cancelar</button>
+      <button class="btn btn-secondary" onclick="enviarNotifWhatsApp()" style="background:#25D366;color:white;border-color:#25D366">💬 Abrir WhatsApp</button>
+      <button class="btn btn-primary" onclick="enviarNotifCampana()" style="background:var(--blue);border-color:var(--blue)">🔔 Enviar a la campana</button>
+      <button class="btn btn-primary" onclick="enviarNotifCorreo()">📧 Abrir Correo</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CREAR/EDITAR TAREA o SUBTAREA -->
+<div class="modal-overlay" id="modal-tarea">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="mt-title">Tarea</h2>
+      <button class="modal-close" onclick="cerrarModal('modal-tarea')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-field full">
+          <label>Nombre *</label>
+          <input type="text" id="mt-nombre" placeholder="Ej: Diseño de mockups, Revisión con stakeholders...">
+        </div>
+        <div class="form-field full">
+          <label>Responsables *</label>
+          <div class="multi-resp" id="mt-multi-resp"></div>
+        </div>
+        <div class="form-field">
+          <label>Fecha inicio *</label>
+          <input type="date" id="mt-fecha-inicio">
+        </div>
+        <div class="form-field">
+          <label>Fecha fin *</label>
+          <input type="date" id="mt-fecha-fin">
+        </div>
+        <div class="form-field" id="mt-avance-wrap">
+          <label>Avance %</label>
+          <input type="number" id="mt-avance" min="0" max="100" value="0">
+        </div>
+        <div class="form-field">
+          <label>Estado</label>
+          <select id="mt-estado">
+            <option value="planeado">Planeado</option>
+            <option value="en_curso">En curso</option>
+            <option value="atrasado">Atrasado</option>
+            <option value="completado">Completado</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label>Prioridad</label>
+          <select id="mt-prioridad">
+            <option value="baja">Baja</option>
+            <option value="media" selected>Media</option>
+            <option value="alta">Alta</option>
+            <option value="critica">Crítica</option>
+          </select>
+        </div>
+        <div class="form-field full">
+          <label>Descripción</label>
+          <textarea id="mt-descripcion" placeholder="Detalles, notas, contexto..."></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="cerrarModal('modal-tarea')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarTarea()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL IMPORT EXCEL -->
+<div class="modal-overlay" id="modal-import">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>📥 Importar proyectos desde Excel</h2>
+      <button class="modal-close" onclick="cerrarModal('modal-import')">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="margin-bottom:14px;font-size:12.5px;color:var(--lava2)">
+        Tu Excel debe tener las columnas: <b>nombre, tipo, responsables (separados por coma), fecha_inicio, fecha_fin, avance, estado, prioridad, descripcion</b>.
+        <a href="#" onclick="descargarPlantillaExcel(event)" style="color:var(--blue);font-weight:700">📥 Descargar plantilla</a>
+      </p>
+      <div class="excel-dropzone" id="dropzone" onclick="document.getElementById('file-input').click()">
+        <div class="icon">📊</div>
+        <div class="txt">Click o arrastra tu archivo .xlsx</div>
+        <div class="sub">Formatos soportados: .xlsx, .xls, .csv</div>
+        <input type="file" id="file-input" accept=".xlsx,.xls,.csv" style="display:none" onchange="procesarArchivoExcel(this)">
+      </div>
+      <div id="excel-preview-wrap" style="display:none">
+        <p style="margin:14px 0 8px;font-size:12px"><b id="preview-count"></b> registros listos para importar:</p>
+        <div class="excel-preview" id="excel-preview"></div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="cerrarModal('modal-import')">Cancelar</button>
+      <button class="btn btn-primary" id="btn-confirmar-import" onclick="confirmarImport()" disabled>✓ Importar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">✓ Acción exitosa</div>
+
+<script>
+
+// Logos embebidos como base64 (transparentes, sin dependencias externas)
+const BRAND = window.__BRAND__ || {};
+const IMG_LOGO   = BRAND.logo || '';
+const IMG_LOGO_HEADER = BRAND.logo_header || BRAND.logo || '';
+// (mascota de terceros eliminada — producto white-label)
+
+// ═══════════════════════════════════════════════════════════════════
+//  DATOS SIMULADOS — proyectos de muestra
+// ═══════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
+//  USUARIOS — estructura idéntica a tabla `usuarios` de PostgreSQL
+//  En producción esto se carga vía /api/admin/usuarios?acceso_proyectos=1
+// ═══════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
+//  CONSTANTES desde Jinja (current_user)
+// ═══════════════════════════════════════════════════════════════════
+const USUARIO_ACTUAL = "{{ usuario }}";
+const NOMBRE_ACTUAL  = "{{ nombre }}";
+const ROL_ACTUAL     = "{{ rol }}";
+
+// ═══════════════════════════════════════════════════════════════════
+//  USUARIOS y PROYECTOS — se cargan vía API al iniciar
+// ═══════════════════════════════════════════════════════════════════
+let USUARIOS = [];        // poblado por loadUsuarios()
+let RESPONSABLES = [];    // alias retrocompatible
+let PROYECTOS = [];       // poblado por loadProyectos()
+let NOTIFICACIONES = [];  // sin uso por ahora (se podrá poblar desde BD futuro)
+let NEXT_ID = 1;          // no usado: ahora los IDs los asigna PostgreSQL
+
+// Helper para asignar color avatar de forma determinista
+function _avatarColorFor(usuario) {
+  let h = 0;
+  for (let i = 0; i < usuario.length; i++) h = (h * 31 + usuario.charCodeAt(i)) % 5;
+  return h;
+}
+
+async function loadUsuarios() {
+  try {
+    const res = await fetch('/api/proyectos/usuarios', { credentials: 'same-origin' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    USUARIOS = data.map(u => ({ ...u, avatar_color: _avatarColorFor(u.usuario) }));
+    RESPONSABLES = USUARIOS.map(u => ({ id: u.usuario, nombre: u.nombre, color: u.avatar_color }));
+    console.log(`✅ ${USUARIOS.length} usuarios cargados`);
+  } catch (err) {
+    console.error('Error cargando usuarios:', err);
+    showToast('Error cargando usuarios: ' + err.message, 'error');
+  }
+}
+
+async function loadProyectos() {
+  try {
+    const res = await fetch('/api/proyectos', { credentials: 'same-origin' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    PROYECTOS = await res.json();
+    console.log(`✅ ${PROYECTOS.length} proyectos cargados`);
+  } catch (err) {
+    console.error('Error cargando proyectos:', err);
+    showToast('Error cargando proyectos: ' + err.message, 'error');
+    PROYECTOS = [];
+  }
+}
+
+async function loadNotificaciones() {
+  try {
+    const res = await fetch('/api/proyectos/notificaciones', { credentials: 'same-origin' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    NOTIFICACIONES = await res.json();
+    console.log(`✅ ${NOTIFICACIONES.length} notificaciones cargadas`);
+  } catch (err) {
+    console.error('Error cargando notificaciones:', err);
+    NOTIFICACIONES = [];
+  }
+}
+
+// Wrapper para refrescar la vista actual
+async function refrescarTodo() {
+  await loadProyectos();
+  renderTodo();
+  // Si había un detalle abierto, refrescarlo
+  if (STATE.detalle_id && document.getElementById('modal-detalle').classList.contains('open')) {
+    abrirDetalle(STATE.detalle_id);
+  }
+}
+
+// Helper para reemplazar un proyecto en el array tras una mutación
+function _replaceProyecto(p) {
+  if (!p || !p.id) return;
+  const idx = PROYECTOS.findIndex(x => x.id === p.id);
+  if (idx >= 0) PROYECTOS[idx] = p;
+  else PROYECTOS.unshift(p);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════════════
+const STATE = {
+  view: 'lista',
+  filtros: { search:'', estado:'', tipo:'', responsable:'' },
+  sort: { col:'fecha_inicio', dir:'asc' },
+  editing_id: null,
+  detalle_id: null,
+  gantt_zoom: 'dias',
+  excel_preview: null,
+};
+
+// ═══════════════════════════════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════════════════════════════
+function $(id) { return document.getElementById(id); }
+function esc(s) { return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
+function dx(d) {
+  // helper: hoy + d días en formato YYYY-MM-DD
+  const t = new Date(); t.setDate(t.getDate() + d);
+  return t.toISOString().substring(0,10);
+}
+function fmtFecha(d) {
+  if (!d) return '—';
+  const dt = new Date(d);
+  return dt.toLocaleDateString('es-MX', {day:'2-digit', month:'short'});
+}
+function fmtFechaRel(iso) {
+  const t = new Date(iso);
+  const ahora = new Date();
+  const diffH = (ahora - t) / (1000*60*60);
+  if (diffH < 1) return 'hace minutos';
+  if (diffH < 24) return `hace ${Math.floor(diffH)}h`;
+  const diffD = diffH/24;
+  if (diffD < 7) return `hace ${Math.floor(diffD)}d`;
+  return t.toLocaleDateString('es-MX',{day:'2-digit',month:'short'});
+}
+function diasEntre(a, b) {
+  return Math.round((new Date(b) - new Date(a)) / (1000*60*60*24));
+}
+function getResp(id) { return RESPONSABLES.find(r => r.id === id); }
+function getUsuario(usuario) { return USUARIOS.find(u => u.usuario === usuario); }
+
+// Construir link wa.me con mensaje
+function waLink(usuario, mensaje) {
+  const u = getUsuario(usuario);
+  if (!u || !u.telefono) return null;
+  let tel = String(u.telefono).replace(/[^0-9]/g, '');
+  if (!tel.startsWith('52')) tel = '52' + tel;
+  return `https://wa.me/${tel}?text=${encodeURIComponent(mensaje)}`;
+}
+
+// Construir link mailto
+function mailtoLink(usuario, asunto, cuerpo) {
+  const u = getUsuario(usuario);
+  if (!u || !u.email) return null;
+  return `mailto:${u.email}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`;
+}
+
+function avatarHTML(respId) {
+  const r = getResp(respId);
+  if (!r) return '';
+  const ini = r.nombre.split(' ').map(s => s[0]).slice(0,2).join('');
+  return `<span class="avatar-mini color-${r.color}" title="${esc(r.nombre)}">${ini}</span>`;
+}
+
+// NUEVO: Avatar grupal — múltiples responsables apilados
+function avatarGrupoHTML(respIds, max) {
+  if (!respIds || respIds.length === 0) return '<span style="color:var(--lava2);font-size:11px">—</span>';
+  max = max || 3;
+  const visibles = respIds.slice(0, max);
+  const extras = respIds.length - max;
+  let html = '<span class="avatar-stack">';
+  visibles.forEach((id, i) => {
+    const r = getResp(id);
+    if (!r) return;
+    const ini = r.nombre.split(' ').map(s => s[0]).slice(0,2).join('');
+    html += `<span class="avatar-mini color-${r.color}" style="margin-left:${i===0?0:-8}px;border:2px solid white;z-index:${10-i}" title="${esc(r.nombre)}">${ini}</span>`;
+  });
+  if (extras > 0) {
+    html += `<span class="avatar-mini" style="margin-left:-8px;background:var(--lava2);border:2px solid white;font-size:9px" title="${respIds.slice(max).map(id => getResp(id)?.nombre).join(', ')}">+${extras}</span>`;
+  }
+  html += '</span>';
+  return html;
+}
+
+function nombresResp(respIds) {
+  if (!respIds || respIds.length === 0) return '—';
+  return respIds.map(id => getResp(id)?.nombre || id).join(', ');
+}
+
+// NUEVO: Cálculo recursivo de avance
+function calcAvance(item) {
+  // Si item es subtarea (sin hijos), su avance es manual
+  if (!item.subtareas && !item.tareas) return item.avance || 0;
+  const hijos = item.subtareas || item.tareas;
+  if (!hijos || hijos.length === 0) return item.avance || 0;
+  const sum = hijos.reduce((s, h) => s + calcAvance(h), 0);
+  return Math.round(sum / hijos.length);
+}
+
+// NUEVO: Determinar estado automático basado en avance + fechas
+function estadoAuto(item, avance) {
+  if (avance >= 100) return 'completado';
+  if (avance === 0 && item.fecha_inicio > new Date().toISOString().substring(0,10)) return 'planeado';
+  const hoy = new Date().toISOString().substring(0,10);
+  if (item.fecha_fin < hoy && avance < 100) return 'atrasado';
+  return item.estado || 'en_curso';
+}
+
+// NUEVO: Stats de tareas para un proyecto
+function statsTareas(p) {
+  const todas = (p.tareas || []).flatMap(t => [t, ...(t.subtareas||[])]);
+  const total = todas.length;
+  const completadas = todas.filter(x => calcAvance(x) >= 100).length;
+  const atrasadas = todas.filter(x => x.fecha_fin < dx(0) && calcAvance(x) < 100).length;
+  return { total, completadas, atrasadas, pendientes: total - completadas };
+}
+function colorAvance(estado, avance) {
+  if (estado === 'completado') return 'linear-gradient(90deg, var(--green) 0%, #0a8040 100%)';
+  if (estado === 'atrasado')   return 'linear-gradient(90deg, var(--red) 0%, var(--red-dk) 100%)';
+  if (avance >= 75) return 'linear-gradient(90deg, var(--green) 0%, #0a8040 100%)';
+  if (avance >= 40) return 'linear-gradient(90deg, var(--blue) 0%, var(--blue-md) 100%)';
+  return 'linear-gradient(90deg, var(--orange) 0%, #c46a00 100%)';
+}
+function lbl(v, dict) { return dict[v] || v; }
+const LBL_ESTADO = {planeado:'Planeado',en_curso:'En curso',atrasado:'Atrasado',completado:'Completado',cancelado:'Cancelado'};
+const LBL_TIPO = {general:'General',tienda:'Por tienda',auditoria:'Auditoría'};
+const LBL_PRIO = {baja:'Baja',media:'Media',alta:'Alta',critica:'Crítica'};
+
+function showToast(msg, tipo) {
+  const t = $('toast');
+  t.className = 'toast ' + (tipo||'') + ' show';
+  t.textContent = msg;
+  setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+function getProyectosFiltrados() {
+  const f = STATE.filtros;
+  let arr = PROYECTOS.filter(p => {
+    if (f.estado && p.estado !== f.estado) return false;
+    if (f.tipo && p.tipo !== f.tipo) return false;
+    if (f.responsable && !(p.responsables||[]).includes(f.responsable)) return false;
+    if (f.search) {
+      const q = f.search.toLowerCase();
+      if (!p.nombre.toLowerCase().includes(q) &&
+          !(p.descripcion||'').toLowerCase().includes(q) &&
+          !nombresResp(p.responsables).toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
+  // Sort
+  arr.sort((a, b) => {
+    const av = a[STATE.sort.col], bv = b[STATE.sort.col];
+    if (av == null) return 1;
+    if (bv == null) return -1;
+    const cmp = av < bv ? -1 : av > bv ? 1 : 0;
+    return STATE.sort.dir === 'asc' ? cmp : -cmp;
+  });
+  return arr;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  RENDER: STATS
+// ═══════════════════════════════════════════════════════════════════
+function renderStats() {
+  const total = PROYECTOS.length;
+  const enCurso = PROYECTOS.filter(p => p.estado === 'en_curso').length;
+  const atrasados = PROYECTOS.filter(p => p.estado === 'atrasado').length;
+  const completados = PROYECTOS.filter(p => p.estado === 'completado').length;
+  const criticos = PROYECTOS.filter(p => p.prioridad === 'critica' && p.estado !== 'completado').length;
+  $('stats-strip').innerHTML = `
+    <div class="stat-card s-blue" onclick="STATE.filtros.estado='';renderTodo();">
+      <div class="stat-label">Total proyectos</div>
+      <div class="stat-value">${total}</div>
+      <div class="stat-detail">en el tablero</div>
+    </div>
+    <div class="stat-card s-orange" onclick="STATE.filtros.estado='en_curso';$('filter-estado').value='en_curso';renderTodo();">
+      <div class="stat-label">En curso</div>
+      <div class="stat-value">${enCurso}</div>
+      <div class="stat-detail">activos ahora</div>
+    </div>
+    <div class="stat-card s-red" onclick="STATE.filtros.estado='atrasado';$('filter-estado').value='atrasado';renderTodo();">
+      <div class="stat-label">Atrasados</div>
+      <div class="stat-value">${atrasados}</div>
+      <div class="stat-detail">requieren atención</div>
+    </div>
+    <div class="stat-card s-green" onclick="STATE.filtros.estado='completado';$('filter-estado').value='completado';renderTodo();">
+      <div class="stat-label">Completados</div>
+      <div class="stat-value">${completados}</div>
+      <div class="stat-detail">cerrados con éxito</div>
+    </div>
+    <div class="stat-card s-purple">
+      <div class="stat-label">Críticos abiertos</div>
+      <div class="stat-value">${criticos}</div>
+      <div class="stat-detail">prioridad alta-crítica</div>
+    </div>
+  `;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  RENDER: LISTA
+// ═══════════════════════════════════════════════════════════════════
+function renderLista() {
+  const arr = getProyectosFiltrados();
+  if (arr.length === 0) {
+    $('tbody-proyectos').innerHTML = `
+      <tr><td colspan="8"><div class="empty"><div class="em-icon">📋</div>
+        Sin proyectos que mostrar.<br>
+        <button class="btn btn-primary" onclick="abrirCrear()" style="margin-top:14px">＋ Crear el primero</button>
+      </div></td></tr>`;
+    return;
+  }
+  $('tbody-proyectos').innerHTML = arr.map(p => {
+    const dias = diasEntre(p.fecha_inicio, p.fecha_fin);
+    const avance = p.tareas?.length > 0 ? calcAvance(p) : p.avance;
+    const stats = statsTareas(p);
+    return `
+      <tr onclick="abrirDetalle(${p.id})">
+        <td>
+          <div style="font-weight:700;color:var(--blue-dk);font-size:13px">${esc(p.nombre)}</div>
+          <div style="font-size:10.5px;color:var(--lava2);margin-top:2px">
+            ${p.ceco ? `CECO ${p.ceco} · ` : ''}${stats.total > 0 ? `📝 ${stats.completadas}/${stats.total} tareas` : 'Sin tareas'}
+          </div>
+        </td>
+        <td><span class="tag tipo-${p.tipo}">${lbl(p.tipo,LBL_TIPO)}</span></td>
+        <td>${avatarGrupoHTML(p.responsables, 3)}</td>
+        <td style="font-size:12px;color:var(--blue-dk)">${fmtFecha(p.fecha_inicio)}</td>
+        <td style="font-size:12px;color:var(--blue-dk)">${fmtFecha(p.fecha_fin)}<div style="font-size:10px;color:var(--lava2)">${dias}d</div></td>
+        <td style="min-width:120px">
+          <div class="avance-bar"><div class="avance-bar-fill" style="width:${avance}%;background:${colorAvance(p.estado,avance)}"></div></div>
+          <div class="avance-text">${avance}%${p.tareas?.length > 0 ? ' 🔒' : ''}</div>
+        </td>
+        <td><span class="tag estado-${p.estado}">${lbl(p.estado,LBL_ESTADO)}</span></td>
+        <td><span class="tag prio-${p.prioridad}">${lbl(p.prioridad,LBL_PRIO)}</span></td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function sortBy(col) {
+  if (STATE.sort.col === col) STATE.sort.dir = STATE.sort.dir === 'asc' ? 'desc' : 'asc';
+  else { STATE.sort.col = col; STATE.sort.dir = 'asc'; }
+  renderLista();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  RENDER: GANTT con anidación 3 niveles
+// ═══════════════════════════════════════════════════════════════════
+const GANTT_EXPANDED = new Set();   // ids de proyectos/tareas expandidas (formato 'p1', 'p1-t3')
+
+function toggleGanttRow(key) {
+  if (GANTT_EXPANDED.has(key)) GANTT_EXPANDED.delete(key);
+  else GANTT_EXPANDED.add(key);
+  renderGantt();
+}
+
+function expandirTodoGantt() {
+  PROYECTOS.forEach(p => {
+    GANTT_EXPANDED.add('p' + p.id);
+    (p.tareas||[]).forEach(t => GANTT_EXPANDED.add('p' + p.id + '-t' + t.id));
+  });
+  renderGantt();
+}
+
+function colapsarTodoGantt() {
+  GANTT_EXPANDED.clear();
+  renderGantt();
+}
+
+function renderGantt() {
+  const arr = getProyectosFiltrados();
+  if (arr.length === 0) {
+    $('gantt-container').innerHTML = `<div class="empty"><div class="em-icon">📊</div>Sin proyectos para mostrar</div>`;
+    return;
+  }
+
+  const minDate = arr.reduce((m, p) => p.fecha_inicio < m ? p.fecha_inicio : m, arr[0].fecha_inicio);
+  const maxDate = arr.reduce((m, p) => p.fecha_fin > m ? p.fecha_fin : m, arr[0].fecha_fin);
+  const ini = new Date(minDate); ini.setDate(1);
+  const fin = new Date(maxDate); fin.setMonth(fin.getMonth()+1); fin.setDate(0);
+
+  const totalDias = diasEntre(ini.toISOString().substring(0,10), fin.toISOString().substring(0,10)) + 1;
+  const z = STATE.gantt_zoom;
+
+  let colWidth, columnas = [], headerMonths = [];
+  if (z === 'dias') {
+    colWidth = 28;
+    for (let i=0; i<totalDias; i++) {
+      const d = new Date(ini); d.setDate(ini.getDate()+i);
+      columnas.push(d);
+    }
+  } else if (z === 'semanas') {
+    colWidth = 50;
+    let d = new Date(ini);
+    while (d <= fin) { columnas.push(new Date(d)); d.setDate(d.getDate()+7); }
+  } else {
+    colWidth = 70;
+    let d = new Date(ini);
+    while (d <= fin) { columnas.push(new Date(d)); d.setMonth(d.getMonth()+1); }
+  }
+
+  if (z === 'dias') {
+    let currentMonth = -1;
+    columnas.forEach((d, idx) => {
+      if (d.getMonth() !== currentMonth) {
+        headerMonths.push({idx, mes: d.toLocaleDateString('es-MX',{month:'long',year:'numeric'}), span: 0});
+        currentMonth = d.getMonth();
+      }
+      headerMonths[headerMonths.length-1].span++;
+    });
+  }
+
+  const hoyStr = new Date().toISOString().substring(0,10);
+  const totalWidth = columnas.length * colWidth;
+
+  // Construir lista plana de filas (proyecto + tareas + subtareas según expansion)
+  const filas = [];
+  arr.forEach(p => {
+    const keyP = 'p' + p.id;
+    const expandidoP = GANTT_EXPANDED.has(keyP);
+    const tieneTareas = (p.tareas || []).length > 0;
+    filas.push({
+      tipo: 'proyecto', nivel: 0, key: keyP, expandido: expandidoP,
+      tieneHijos: tieneTareas,
+      nombre: p.nombre, ini: p.fecha_inicio, fin: p.fecha_fin,
+      avance: tieneTareas ? calcAvance(p) : p.avance,
+      color: p.color, estado: p.estado, responsables: p.responsables,
+      onclick: `abrirDetalle(${p.id})`
+    });
+    if (expandidoP && tieneTareas) {
+      p.tareas.forEach(t => {
+        const keyT = keyP + '-t' + t.id;
+        const expandidoT = GANTT_EXPANDED.has(keyT);
+        const tieneSubs = (t.subtareas || []).length > 0;
+        filas.push({
+          tipo: 'tarea', nivel: 1, key: keyT, expandido: expandidoT,
+          tieneHijos: tieneSubs,
+          nombre: t.nombre, ini: t.fecha_inicio, fin: t.fecha_fin,
+          avance: tieneSubs ? calcAvance(t) : t.avance,
+          color: p.color, estado: t.estado, responsables: t.responsables,
+          onclick: `abrirDetalle(${p.id})`
+        });
+        if (expandidoT && tieneSubs) {
+          t.subtareas.forEach(s => {
+            filas.push({
+              tipo: 'subtarea', nivel: 2, key: keyT + '-s' + s.id, expandido: false,
+              tieneHijos: false,
+              nombre: s.nombre, ini: s.fecha_inicio, fin: s.fecha_fin,
+              avance: s.avance, color: p.color, estado: s.estado, responsables: s.responsables,
+              onclick: `abrirDetalle(${p.id})`
+            });
+          });
+        }
+      });
+    }
+  });
+
+  let html = `<div style="overflow-x:auto"><table class="gantt-table" style="width:${280 + totalWidth}px;table-layout:fixed">`;
+  if (z === 'dias' && headerMonths.length > 0) {
+    html += `<thead class="gantt-month-header"><tr><th rowspan="2" style="min-width:280px">PROYECTO / TAREA</th>`;
+    headerMonths.forEach(h => {
+      html += `<th colspan="${h.span}" style="background:var(--blue-md);text-transform:uppercase;letter-spacing:0.5px">${h.mes}</th>`;
+    });
+    html += `</tr><tr>`;
+    columnas.forEach(d => {
+      const isWeekend = d.getDay() === 0 || d.getDay() === 6;
+      html += `<th style="width:${colWidth}px;font-size:9.5px;${isWeekend?'opacity:0.7':''}">${d.getDate()}</th>`;
+    });
+    html += `</tr></thead>`;
+  } else {
+    html += `<thead><tr><th style="min-width:280px">PROYECTO / TAREA</th>`;
+    columnas.forEach(d => {
+      const lbl = z === 'semanas'
+        ? 'S' + Math.ceil(((d - new Date(d.getFullYear(),0,1)) / 86400000 + new Date(d.getFullYear(),0,1).getDay()+1) / 7)
+        : d.toLocaleDateString('es-MX',{month:'short'}).toUpperCase();
+      html += `<th style="width:${colWidth}px">${lbl}</th>`;
+    });
+    html += `</tr></thead>`;
+  }
+
+  html += '<tbody>';
+  filas.forEach(f => {
+    const offsetIni = diasEntre(ini.toISOString().substring(0,10), f.ini);
+    const dur = diasEntre(f.ini, f.fin) + 1;
+    let leftPx, widthPx;
+    if (z === 'dias') {
+      leftPx = offsetIni * colWidth;
+      widthPx = dur * colWidth - 2;
+    } else if (z === 'semanas') {
+      leftPx = (offsetIni / 7) * colWidth;
+      widthPx = (dur / 7) * colWidth - 2;
+    } else {
+      leftPx = (offsetIni / 30.4) * colWidth;
+      widthPx = (dur / 30.4) * colWidth - 2;
+    }
+
+    // Toggle button
+    let toggleBtn = '';
+    if (f.tieneHijos) {
+      toggleBtn = `<span class="tarea-toggle ${f.expandido?'expanded':''}" onclick="event.stopPropagation();toggleGanttRow('${f.key}')" style="font-size:11px;color:var(--blue-dk);cursor:pointer">▶</span>`;
+    } else {
+      toggleBtn = '<span style="display:inline-block;width:18px"></span>';
+    }
+
+    const indent = f.nivel * 18;
+    const fontSize = f.nivel === 0 ? '12.5px' : f.nivel === 1 ? '11.5px' : '10.5px';
+    const fontWeight = f.nivel === 0 ? '700' : f.nivel === 1 ? '600' : '500';
+    const bgColor = f.nivel === 0 ? 'var(--dough2)' : f.nivel === 1 ? 'var(--dough1)' : 'white';
+    const tipoIcon = f.nivel === 0 ? '📁' : f.nivel === 1 ? '📋' : '·';
+
+    // Altura de barra según nivel
+    const barTop = f.nivel === 0 ? 8 : f.nivel === 1 ? 12 : 16;
+    const barHeight = f.nivel === 0 ? 28 : f.nivel === 1 ? 20 : 14;
+    const fontBar = f.nivel === 0 ? '10.5px' : f.nivel === 1 ? '9.5px' : '8.5px';
+
+    html += `<tr><td class="gantt-cell-name" style="background:${bgColor};font-size:${fontSize};font-weight:${fontWeight};padding:8px 10px !important">
+      <div style="display:flex;align-items:center;gap:6px;padding-left:${indent}px">
+        ${toggleBtn}
+        <span style="font-size:11px">${tipoIcon}</span>
+        <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1" title="${esc(f.nombre)}">${esc(f.nombre)}</div>
+        ${avatarGrupoHTML(f.responsables, 2)}
+      </div>
+      <div style="font-size:9.5px;color:var(--lava2);margin-top:3px;margin-left:${indent + 24}px">
+        <span class="tag estado-${f.estado}" style="font-size:8.5px;padding:1px 5px">${lbl(f.estado,LBL_ESTADO)}</span>
+        <span style="margin-left:6px">${f.avance}%</span>
+      </div>
+    </td>`;
+    html += `<td colspan="${columnas.length}" style="position:relative;padding:0;height:${f.nivel===0 ? 60 : f.nivel===1 ? 48 : 40}px;background:${bgColor}">`;
+    columnas.forEach((d, i) => {
+      const isWeekend = z==='dias' && (d.getDay() === 0 || d.getDay() === 6);
+      const isToday   = z==='dias' && d.toISOString().substring(0,10) === hoyStr;
+      const isMonthStart = z==='dias' && d.getDate() === 1;
+      const cls = isToday ? 'today' : isWeekend ? 'weekend' : '';
+      const extraStyle = isMonthStart ? 'border-left:2px solid var(--blue);' : '';
+      html += `<div class="gantt-day ${cls}" style="position:absolute;left:${i*colWidth}px;top:0;bottom:0;width:${colWidth}px;${extraStyle}border-right:1px solid var(--dough3)"></div>`;
+    });
+    // Barra
+    const barOpacity = f.nivel === 0 ? '1' : f.nivel === 1 ? '0.85' : '0.7';
+    html += `<div class="gantt-bar" style="left:${leftPx+2}px;width:${Math.max(widthPx,40)}px;background:${f.color};top:${barTop}px;height:${barHeight}px;font-size:${fontBar};opacity:${barOpacity}" onclick="${f.onclick}">
+      <div class="gantt-bar-fill" style="width:${f.avance}%;background:rgba(255,255,255,0.35)"></div>
+      <span class="gantt-bar-text">${f.avance}% · ${esc(f.nombre.substring(0, f.nivel===0 ? 30 : 25))}</span>
+    </div>`;
+    html += `</td></tr>`;
+  });
+  html += '</tbody></table></div>';
+
+  $('gantt-container').innerHTML = html;
+}
+
+function setGanttZoom(z) {
+  STATE.gantt_zoom = z;
+  document.querySelectorAll('.gantt-zoom-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.zoom === z);
+  });
+  renderGantt();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  RENDER: KANBAN
+// ═══════════════════════════════════════════════════════════════════
+function renderKanban() {
+  const arr = getProyectosFiltrados();
+  const estados = ['planeado','en_curso','atrasado','completado','cancelado'];
+  const wrap = $('kanban-wrap');
+  wrap.innerHTML = estados.map(est => {
+    const items = arr.filter(p => p.estado === est);
+    return `
+      <div class="kanban-col" data-estado="${est}">
+        <div class="kanban-col-head">
+          ${lbl(est, LBL_ESTADO)}
+          <span class="count">${items.length}</span>
+        </div>
+        <div class="kanban-col-body">
+          ${items.length === 0 ? '<div style="text-align:center;color:#bbb;padding:30px 10px;font-size:11px">Sin proyectos</div>' : ''}
+          ${items.map(p => {
+            const dias = diasEntre(new Date().toISOString().substring(0,10), p.fecha_fin);
+            const avance = p.tareas?.length > 0 ? calcAvance(p) : p.avance;
+            const stats = statsTareas(p);
+            const diasTxt = dias < 0 ? `<span style="color:var(--red);font-weight:700">⚠️ ${Math.abs(dias)}d vencido</span>`
+                          : dias === 0 ? '<span style="color:var(--orange);font-weight:700">📅 vence hoy</span>'
+                          : `📅 ${dias}d restantes`;
+            return `
+              <div class="kanban-card" style="border-left-color:${p.color}" onclick="abrirDetalle(${p.id})">
+                <div class="kanban-card-title">${esc(p.nombre)}</div>
+                <div class="kanban-card-meta">
+                  <span class="tag tipo-${p.tipo}" style="font-size:9px;padding:2px 7px">${lbl(p.tipo,LBL_TIPO)}</span>
+                  <span class="tag prio-${p.prioridad}" style="font-size:9px;padding:2px 7px">${lbl(p.prioridad,LBL_PRIO)}</span>
+                </div>
+                ${stats.total > 0 ? `<div style="font-size:10px;color:var(--lava2);margin-bottom:6px">📝 ${stats.completadas}/${stats.total} tareas${stats.atrasadas > 0 ? ` · <span style="color:var(--red);font-weight:700">${stats.atrasadas} atrasadas</span>` : ''}</div>` : ''}
+                <div class="avance-bar" style="height:6px"><div class="avance-bar-fill" style="width:${avance}%;background:${colorAvance(p.estado,avance)}"></div></div>
+                <div class="kanban-card-foot">
+                  ${avatarGrupoHTML(p.responsables, 3)}
+                  <span style="margin-left:auto;font-size:10px;color:var(--lava2)">${diasTxt}</span>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  RENDER: NOTIFICACIONES
+// ═══════════════════════════════════════════════════════════════════
+function renderNotif() {
+  const sinLeer = NOTIFICACIONES.filter(n => !n.leida).length;
+  const badge = $('notif-badge');
+  if (sinLeer > 0) { badge.style.display = 'grid'; badge.textContent = sinLeer; }
+  else badge.style.display = 'none';
+
+  const list = $('notif-list');
+  if (NOTIFICACIONES.length === 0) {
+    list.innerHTML = '<div class="notif-empty">No hay notificaciones</div>';
+    return;
+  }
+  list.innerHTML = NOTIFICACIONES
+    .sort((a,b) => b.time.localeCompare(a.time))
+    .map(n => `
+      <div class="notif-item ${n.leida?'':'unread'}" onclick="clickNotif(${n.id})">
+        <div class="notif-icon tipo-${n.tipo}">${
+          n.tipo === 'comentario' ? '💬' :
+          n.tipo === 'asignado'   ? '👤' :
+          n.tipo === 'vencimiento'? '⚠️' :
+          n.tipo === 'cambio'     ? '✓' : '🔔'
+        }</div>
+        <div class="notif-content">
+          <b>${esc(n.titulo)}</b>
+          ${esc(n.detalle)}
+          <div class="notif-time">${fmtFechaRel(n.time)}</div>
+        </div>
+      </div>
+    `).join('');
+}
+
+function toggleNotif() {
+  $('notif-panel').classList.toggle('open');
+}
+async function marcarTodasLeidas() {
+  try {
+    await fetch('/api/proyectos/notificaciones/leer', {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({})   // sin ids = marca todas las mias
+    });
+    NOTIFICACIONES.forEach(n => n.leida = true);
+    renderNotif();
+    showToast('✓ Notificaciones marcadas como leídas', 'success');
+  } catch (err) {
+    showToast('Error al marcar leídas', 'error');
+  }
+}
+function clickNotif(id) {
+  const n = NOTIFICACIONES.find(x => x.id === id);
+  if (!n) return;
+  if (!n.leida) {
+    n.leida = true;
+    fetch('/api/proyectos/notificaciones/leer', {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: [id] })
+    }).catch(() => {});
+  }
+  if (n.proyecto_id) abrirDetalle(n.proyecto_id);
+  $('notif-panel').classList.remove('open');
+  renderNotif();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  MODAL CREAR / EDITAR
+// ═══════════════════════════════════════════════════════════════════
+let RESP_SELECCIONADOS = new Set();   // estado del multi-select
+
+function renderMultiResp() {
+  $('f-multi-resp').innerHTML = USUARIOS.map(u => {
+    const sel = RESP_SELECCIONADOS.has(u.usuario);
+    const ini = u.nombre.split(' ').map(s => s[0]).slice(0,2).join('');
+    const subtxt = u.rol + (u.region !== '-' && u.region !== 'Nacional' ? ' · ' + u.region : '');
+    return `
+      <span class="multi-resp-chip ${sel?'selected':''}" data-resp="${u.usuario}" onclick="toggleResp('${u.usuario}')" title="${esc(u.email)}">
+        <span class="avatar-mini color-${u.avatar_color}" style="width:24px;height:24px;font-size:10px;margin:0">${ini}</span>
+        <div style="display:flex;flex-direction:column;align-items:flex-start;line-height:1.2">
+          <span style="font-weight:700">${esc(u.nombre)}</span>
+          <span style="font-size:9.5px;opacity:0.85">${esc(subtxt)}</span>
+        </div>
+      </span>
+    `;
+  }).join('');
+}
+
+function toggleResp(id) {
+  if (RESP_SELECCIONADOS.has(id)) RESP_SELECCIONADOS.delete(id);
+  else RESP_SELECCIONADOS.add(id);
+  renderMultiResp();
+}
+
+function getResponsablesSeleccionados() {
+  return Array.from(RESP_SELECCIONADOS);
+}
+
+function llenarSelectsModal() {
+  $('f-depende').innerHTML = '<option value="">— Sin dependencia —</option>' +
+    PROYECTOS.filter(p => p.id !== STATE.editing_id).map(p => `<option value="${p.id}">${esc(p.nombre)}</option>`).join('');
+  renderMultiResp();
+}
+
+function aplicarBloqueoAvance(tieneTareas) {
+  const wrap = $('f-avance-wrap');
+  if (tieneTareas) wrap.classList.add('field-locked');
+  else wrap.classList.remove('field-locked');
+}
+
+function abrirCrear() {
+  STATE.editing_id = null;
+  $('modal-edit-title').textContent = '＋ Nuevo proyecto';
+  $('btn-eliminar').style.display = 'none';
+  RESP_SELECCIONADOS = new Set(['rgonzalez']);
+  llenarSelectsModal();
+  $('f-nombre').value = '';
+  $('f-tipo').value = 'general';
+  $('f-fecha-inicio').value = dx(0);
+  $('f-fecha-fin').value = dx(30);
+  $('f-avance').value = 0;
+  $('f-estado').value = 'planeado';
+  $('f-prioridad').value = 'media';
+  $('f-color').value = '#0090E2';
+  $('f-depende').value = '';
+  $('f-descripcion').value = '';
+  aplicarBloqueoAvance(false);
+  $('modal-edit').classList.add('open');
+}
+
+function abrirEditar(id) {
+  const p = PROYECTOS.find(x => x.id === id);
+  if (!p) return;
+  STATE.editing_id = id;
+  $('modal-edit-title').textContent = '✏️ Editar: ' + p.nombre;
+  $('btn-eliminar').style.display = 'inline-flex';
+  RESP_SELECCIONADOS = new Set(p.responsables || []);
+  llenarSelectsModal();
+  $('f-nombre').value = p.nombre;
+  $('f-tipo').value = p.tipo;
+  $('f-fecha-inicio').value = p.fecha_inicio;
+  $('f-fecha-fin').value = p.fecha_fin;
+  $('f-avance').value = (p.tareas?.length > 0) ? calcAvance(p) : p.avance;
+  $('f-estado').value = p.estado;
+  $('f-prioridad').value = p.prioridad;
+  $('f-color').value = p.color || '#0090E2';
+  $('f-depende').value = p.depende_de || '';
+  $('f-descripcion').value = p.descripcion || '';
+  aplicarBloqueoAvance((p.tareas||[]).length > 0);
+  $('modal-edit').classList.add('open');
+}
+
+async function guardarProyecto() {
+  const nombre = $('f-nombre').value.trim();
+  if (!nombre) { showToast('El nombre es obligatorio', 'error'); return; }
+  const fechaIni = $('f-fecha-inicio').value;
+  const fechaFin = $('f-fecha-fin').value;
+  if (!fechaIni || !fechaFin) { showToast('Fechas obligatorias', 'error'); return; }
+  if (fechaFin < fechaIni) { showToast('La fecha de fin debe ser ≥ inicio', 'error'); return; }
+  const responsables = getResponsablesSeleccionados();
+  if (responsables.length === 0) { showToast('Debe haber al menos un responsable', 'error'); return; }
+
+  const datos = {
+    nombre, tipo: $('f-tipo').value, responsables,
+    fecha_inicio: fechaIni, fecha_fin: fechaFin,
+    avance: parseInt($('f-avance').value) || 0,
+    estado: $('f-estado').value, prioridad: $('f-prioridad').value,
+    color: $('f-color').value,
+    depende_de: $('f-depende').value ? parseInt($('f-depende').value) : null,
+    descripcion: $('f-descripcion').value.trim(),
+  };
+
+  try {
+    const url = STATE.editing_id ? `/api/proyectos/${STATE.editing_id}` : '/api/proyectos';
+    const method = STATE.editing_id ? 'PUT' : 'POST';
+    const res = await fetch(url, {
+      method, credentials: 'same-origin',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(datos)
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(()=>({}));
+      throw new Error(err.error || `HTTP ${res.status}`);
+    }
+    const proyecto = await res.json();
+    _replaceProyecto(proyecto);
+    showToast(STATE.editing_id ? '✓ Proyecto actualizado' : '✓ Proyecto creado', 'success');
+    cerrarModal('modal-edit');
+    renderTodo();
+  } catch (err) {
+    showToast('Error: ' + err.message, 'error');
+    console.error(err);
+  }
+}
+
+async function eliminarProyecto() {
+  if (!STATE.editing_id) return;
+  if (!confirm('¿Eliminar este proyecto? Esta acción no se puede deshacer.')) return;
+  try {
+    const res = await fetch(`/api/proyectos/${STATE.editing_id}`, {
+      method: 'DELETE', credentials: 'same-origin'
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    PROYECTOS = PROYECTOS.filter(p => p.id !== STATE.editing_id);
+    showToast('✓ Proyecto eliminado', 'success');
+    cerrarModal('modal-edit');
+    renderTodo();
+  } catch (err) {
+    showToast('Error: ' + err.message, 'error');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  MODAL DETALLE
+// ═══════════════════════════════════════════════════════════════════
+function abrirDetalle(id) {
+  const p = PROYECTOS.find(x => x.id === id);
+  if (!p) return;
+  STATE.detalle_id = id;
+  $('detalle-title').textContent = p.nombre;
+  const stats = statsTareas(p);
+  $('dt-com-count').textContent = p.comentarios?.length ? `(${p.comentarios.length})` : '';
+  $('dt-tar-count').textContent = stats.total ? `(${stats.completadas}/${stats.total})` : '';
+
+  const avanceCalc = (p.tareas?.length > 0) ? calcAvance(p) : p.avance;
+
+  // Tab info
+  const dep = p.depende_de ? PROYECTOS.find(x => x.id === p.depende_de) : null;
+  $('dt-info').innerHTML = `
+    <div class="info-grid">
+      <div class="info-cell"><div class="lbl">Estado</div><div class="val"><span class="tag estado-${p.estado}">${lbl(p.estado,LBL_ESTADO)}</span></div></div>
+      <div class="info-cell"><div class="lbl">Prioridad</div><div class="val"><span class="tag prio-${p.prioridad}">${lbl(p.prioridad,LBL_PRIO)}</span></div></div>
+      <div class="info-cell"><div class="lbl">Tipo</div><div class="val"><span class="tag tipo-${p.tipo}">${lbl(p.tipo,LBL_TIPO)}</span></div></div>
+      <div class="info-cell" style="grid-column: span 3"><div class="lbl">Responsables (${(p.responsables||[]).length})</div><div class="val">${avatarGrupoHTML(p.responsables, 5)} <span style="font-size:11.5px;margin-left:8px">${nombresResp(p.responsables)}</span></div></div>
+      <div class="info-cell"><div class="lbl">Inicio</div><div class="val">${fmtFecha(p.fecha_inicio)}</div></div>
+      <div class="info-cell"><div class="lbl">Fin</div><div class="val">${fmtFecha(p.fecha_fin)}</div></div>
+      <div class="info-cell"><div class="lbl">Duración</div><div class="val">${diasEntre(p.fecha_inicio, p.fecha_fin)} días</div></div>
+    </div>
+    <div style="margin-bottom:14px">
+      <div style="font-size:11px;font-weight:700;color:var(--lava2);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:6px">
+        AVANCE ${stats.total > 0 ? '<span style="color:var(--blue);text-transform:none">🔒 calculado desde tareas</span>' : ''}
+      </div>
+      <div class="avance-bar" style="height:14px"><div class="avance-bar-fill" style="width:${avanceCalc}%;background:${colorAvance(p.estado,avanceCalc)}"></div></div>
+      <div style="margin-top:5px;font-size:13px;font-weight:700;color:var(--blue-dk)">${avanceCalc}% completado</div>
+    </div>
+    ${stats.total > 0 ? `
+      <div style="background:var(--dough2);padding:10px 14px;border-radius:8px;margin-bottom:14px;display:flex;gap:18px;font-size:12px">
+        <span>📝 <b>${stats.total}</b> tareas/subtareas en total</span>
+        <span>✅ <b style="color:var(--green)">${stats.completadas}</b> completadas</span>
+        <span>⏳ <b style="color:var(--orange)">${stats.pendientes}</b> pendientes</span>
+        ${stats.atrasadas > 0 ? `<span>⚠️ <b style="color:var(--red)">${stats.atrasadas}</b> atrasadas</span>` : ''}
+      </div>
+    ` : ''}
+    <div>
+      <div style="font-size:11px;font-weight:700;color:var(--lava2);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:6px">DESCRIPCIÓN</div>
+      <div style="font-size:13px;color:var(--dark);line-height:1.6;background:var(--dough2);padding:12px 14px;border-radius:8px">
+        ${esc(p.descripcion || 'Sin descripción')}
+      </div>
+    </div>
+    ${p.ceco ? `<div style="margin-top:14px"><b>CECO asociado:</b> ${p.ceco}</div>` : ''}
+  `;
+
+  // Tab tareas
+  renderTabTareas(p);
+
+  // Tab comentarios
+  const coms = p.comentarios || [];
+  $('dt-comentarios').innerHTML = `
+    <div style="font-size:13px;color:var(--lava2);margin-bottom:10px">
+      ${coms.length} comentario${coms.length===1?'':'s'} en este proyecto
+    </div>
+    <div class="comentarios-list">
+      ${coms.length === 0 ? '<div class="empty" style="padding:30px"><div class="em-icon">💬</div>Sin comentarios todavía<br>Sé el primero en comentar</div>' : ''}
+      ${coms.map(c => {
+        const ar = getResp(c.autor);
+        return `
+          <div class="comentario">
+            ${avatarHTML(c.autor)}
+            <div class="comentario-content">
+              <div class="comentario-head">
+                <span class="comentario-autor">${ar?.nombre||c.autor}</span>
+                <span class="comentario-time">${fmtFechaRel(c.time)}</span>
+              </div>
+              <div class="comentario-texto">${esc(c.texto)}</div>
+            </div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+    <div class="comentario-input-wrap">
+      <input type="text" class="comentario-input" id="comentario-input" placeholder="Escribe un comentario y presiona Enter..." onkeydown="if(event.key==='Enter')agregarComentario()">
+      <button class="btn btn-primary" onclick="agregarComentario()">Enviar</button>
+    </div>
+  `;
+
+  // Tab dependencias
+  const dependientes = PROYECTOS.filter(x => x.depende_de === p.id);
+  $('dt-dependencias').innerHTML = `
+    ${dep ? `
+      <h3 style="font-size:11px;color:var(--lava2);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:10px">⬆️ Este proyecto depende de:</h3>
+      <div class="dep-item" onclick="abrirDetalle(${dep.id})" style="cursor:pointer">
+        <span class="arrow">→</span>
+        <div style="flex:1">
+          <b>${esc(dep.nombre)}</b><br>
+          <span style="font-size:10.5px;color:var(--lava2)">
+            <span class="tag estado-${dep.estado}" style="font-size:9px">${lbl(dep.estado,LBL_ESTADO)}</span>
+            · ${dep.tareas?.length>0 ? calcAvance(dep) : dep.avance}% · termina ${fmtFecha(dep.fecha_fin)}
+          </span>
+        </div>
+      </div>
+    ` : '<div style="color:var(--lava2);font-size:12.5px;margin-bottom:18px"><i>Este proyecto no tiene dependencias</i></div>'}
+
+    ${dependientes.length > 0 ? `
+      <h3 style="font-size:11px;color:var(--lava2);text-transform:uppercase;letter-spacing:0.4px;margin:18px 0 10px">⬇️ Proyectos que dependen de éste:</h3>
+      <div class="dep-list">
+        ${dependientes.map(d => `
+          <div class="dep-item" onclick="abrirDetalle(${d.id})" style="cursor:pointer;border-left-color:var(--green)">
+            <span class="arrow" style="color:var(--green)">←</span>
+            <div style="flex:1">
+              <b>${esc(d.nombre)}</b><br>
+              <span style="font-size:10.5px;color:var(--lava2)">
+                <span class="tag estado-${d.estado}" style="font-size:9px">${lbl(d.estado,LBL_ESTADO)}</span>
+                · ${d.tareas?.length>0 ? calcAvance(d) : d.avance}%
+              </span>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    ` : '<div style="color:var(--lava2);font-size:12.5px"><i>Ningún otro proyecto depende de éste</i></div>'}
+  `;
+
+  // Reset al primer tab
+  document.querySelectorAll('.detail-tab').forEach(t => t.classList.toggle('active', t.dataset.dt === 'info'));
+  ['dt-info','dt-tareas','dt-comentarios','dt-dependencias'].forEach(id => $(id).classList.toggle('active', id==='dt-info'));
+
+  $('modal-detalle').classList.add('open');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  TAB TAREAS — render lista de tareas con subtareas, mini-Gantt
+// ═══════════════════════════════════════════════════════════════════
+const TAREA_EXPANDED = new Set();   // ids de tareas con subtareas expandidas
+
+function renderTabTareas(p) {
+  const tareas = p.tareas || [];
+  const stats = statsTareas(p);
+
+  let html = `
+    <div class="tareas-toolbar">
+      <div class="tareas-stats">
+        ${tareas.length === 0 ? '<i>Este proyecto aún no tiene tareas. Crea la primera abajo.</i>' : `
+          📝 <b>${tareas.length}</b> tareas, <b>${stats.total - tareas.length}</b> subtareas ·
+          ✅ <b>${stats.completadas}/${stats.total}</b> completadas
+          ${stats.atrasadas > 0 ? `· <span class="crit">⚠️ ${stats.atrasadas} atrasadas</span>` : ''}
+        `}
+      </div>
+      <button class="btn-add-tarea" onclick="abrirCrearTarea(${p.id})">＋ Nueva tarea</button>
+    </div>
+  `;
+
+  // Mini-Gantt si hay tareas
+  if (tareas.length > 0) {
+    html += renderMiniGantt(p);
+    html += '<div class="tareas-list">';
+    tareas.forEach(t => {
+      html += renderTareaItem(p, t);
+    });
+    html += '</div>';
+  }
+
+  $('dt-tareas').innerHTML = html;
+}
+
+function renderTareaItem(p, t) {
+  const subs = t.subtareas || [];
+  const avance = subs.length > 0 ? calcAvance(t) : t.avance;
+  const completada = avance >= 100;
+  const atrasada = !completada && t.fecha_fin < dx(0);
+  const planeada = avance === 0 && t.fecha_inicio > dx(0);
+  const expandida = TAREA_EXPANDED.has(t.id);
+  const cls = completada ? 'completada' : atrasada ? 'atrasada' : planeada ? 'planeada' : '';
+
+  let html = `
+    <div class="tarea-item ${cls}">
+      <div class="tarea-header">
+        <span class="tarea-toggle ${subs.length>0 ? (expandida?'expanded':'') : 'empty'}"
+              onclick="event.stopPropagation();toggleTarea(${t.id})">▶</span>
+        <div class="tarea-check ${completada?'checked':''}" onclick="event.stopPropagation();toggleCompletarTarea(${p.id}, ${t.id})"></div>
+        <div class="tarea-info">
+          <div class="tarea-nombre">${esc(t.nombre)}</div>
+          <div class="tarea-meta">
+            ${avatarGrupoHTML(t.responsables, 3)}
+            <span>📅 ${fmtFecha(t.fecha_inicio)} → ${fmtFecha(t.fecha_fin)}</span>
+            <div class="barra"><div class="barra-fill" style="width:${avance}%;background:${colorAvance(t.estado,avance)}"></div></div>
+            <span><b>${avance}%</b>${subs.length>0?' 🔒':''}</span>
+            <span class="tag prio-${t.prioridad}" style="font-size:9px;padding:1px 6px">${lbl(t.prioridad,LBL_PRIO)}</span>
+            ${subs.length > 0 ? `<span style="color:var(--lava2)">📑 ${subs.filter(s=>s.avance>=100).length}/${subs.length} subtareas</span>` : ''}
+          </div>
+        </div>
+        <div class="tarea-acciones">
+          <button class="tarea-btn" onclick="event.stopPropagation();abrirEditarTarea(${p.id}, ${t.id})" title="Editar">✏️</button>
+          <button class="tarea-btn del" onclick="event.stopPropagation();eliminarTarea(${p.id}, ${t.id})" title="Eliminar">🗑️</button>
+        </div>
+      </div>
+      <div class="subtareas-wrap ${expandida?'open':''}">
+        ${subs.map(s => renderSubtareaRow(p, t, s)).join('')}
+        <button class="btn-add-sub" onclick="abrirCrearSubtarea(${p.id}, ${t.id})">＋ Agregar subtarea</button>
+      </div>
+    </div>
+  `;
+  return html;
+}
+
+function renderSubtareaRow(p, t, s) {
+  const completada = s.avance >= 100;
+  const atrasada = !completada && s.fecha_fin < dx(0);
+  const cls = completada ? 'completada' : atrasada ? 'atrasada' : '';
+  return `
+    <div class="subtarea-row ${cls}">
+      <div class="tarea-check ${completada?'checked':''}" style="width:16px;height:16px"
+           onclick="event.stopPropagation();toggleCompletarSubtarea(${p.id}, ${t.id}, ${s.id})"></div>
+      <span class="nombre">${esc(s.nombre)}</span>
+      ${avatarGrupoHTML(s.responsables, 2)}
+      <span class="fechas">${fmtFecha(s.fecha_inicio)} → ${fmtFecha(s.fecha_fin)}</span>
+      <span style="font-size:10.5px;color:var(--blue-dk);font-weight:700;min-width:30px;text-align:right">${s.avance}%</span>
+      <button class="tarea-btn" onclick="event.stopPropagation();abrirEditarSubtarea(${p.id}, ${t.id}, ${s.id})" title="Editar" style="width:24px;height:24px;font-size:11px">✏️</button>
+      <button class="tarea-btn del" onclick="event.stopPropagation();eliminarSubtarea(${p.id}, ${t.id}, ${s.id})" title="Eliminar" style="width:24px;height:24px;font-size:11px">🗑️</button>
+    </div>
+  `;
+}
+
+function renderMiniGantt(p) {
+  const tareas = p.tareas || [];
+  if (tareas.length === 0) return '';
+
+  // Rango temporal del proyecto
+  const ini = new Date(p.fecha_inicio);
+  const fin = new Date(p.fecha_fin);
+  const totalDias = Math.max(1, diasEntre(p.fecha_inicio, p.fecha_fin));
+  const hoy = new Date();
+  const hoyOffset = ((hoy - ini) / (1000*60*60*24)) / totalDias * 100;
+
+  let html = '<div class="mini-gantt"><div style="font-size:10px;color:var(--lava2);font-weight:700;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:8px">⏱️ TIMELINE DE TAREAS</div>';
+
+  tareas.forEach(t => {
+    const offsetIni = (diasEntre(p.fecha_inicio, t.fecha_inicio) / totalDias) * 100;
+    const ancho = (Math.max(1, diasEntre(t.fecha_inicio, t.fecha_fin)) / totalDias) * 100;
+    const avance = (t.subtareas?.length>0) ? calcAvance(t) : t.avance;
+
+    html += `
+      <div class="mini-gantt-row">
+        <div class="mini-gantt-label" title="${esc(t.nombre)}">${esc(t.nombre)}</div>
+        <div class="mini-gantt-track">
+          ${hoyOffset >= 0 && hoyOffset <= 100 ? `<div class="mini-gantt-today" style="left:${hoyOffset}%"></div>` : ''}
+          <div class="mini-gantt-bar" style="left:${Math.max(0,offsetIni)}%;width:${Math.min(100-offsetIni, ancho)}%;background:${p.color}" title="${avance}% · ${esc(t.nombre)}">
+            <div class="mini-gantt-bar-fill" style="width:${avance}%"></div>
+            <span style="position:relative;z-index:1">${avance}%</span>
+          </div>
+        </div>
+      </div>
+    `;
+    // Sub-filas para subtareas si están expandidas
+    if (TAREA_EXPANDED.has(t.id) && (t.subtareas||[]).length > 0) {
+      t.subtareas.forEach(s => {
+        const sOff = (diasEntre(p.fecha_inicio, s.fecha_inicio) / totalDias) * 100;
+        const sAncho = (Math.max(1, diasEntre(s.fecha_inicio, s.fecha_fin)) / totalDias) * 100;
+        html += `
+          <div class="mini-gantt-row is-sub">
+            <div class="mini-gantt-label" title="${esc(s.nombre)}">↳ ${esc(s.nombre)}</div>
+            <div class="mini-gantt-track" style="height:14px">
+              <div class="mini-gantt-bar" style="left:${Math.max(0,sOff)}%;width:${Math.min(100-sOff, sAncho)}%;background:${p.color};opacity:0.65;height:11px;top:1.5px;font-size:8.5px" title="${s.avance}% · ${esc(s.nombre)}">
+                <div class="mini-gantt-bar-fill" style="width:${s.avance}%"></div>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+    }
+  });
+
+  html += '</div>';
+  return html;
+}
+
+function toggleTarea(id) {
+  if (TAREA_EXPANDED.has(id)) TAREA_EXPANDED.delete(id);
+  else TAREA_EXPANDED.add(id);
+  abrirDetalle(STATE.detalle_id);
+  // Mantener tab tareas activo
+  document.querySelectorAll('.detail-tab').forEach(t => t.classList.toggle('active', t.dataset.dt === 'tareas'));
+  ['dt-info','dt-tareas','dt-comentarios','dt-dependencias'].forEach(id => $(id).classList.toggle('active', id==='dt-tareas'));
+}
+
+async function toggleCompletarTarea(pid, tid) {
+  const p = PROYECTOS.find(x => x.id === pid);
+  const t = p.tareas.find(x => x.id === tid);
+  if (!t) return;
+  if ((t.subtareas||[]).length > 0) {
+    showToast('Esta tarea tiene subtareas — completa primero las subtareas', 'error');
+    return;
+  }
+  const nuevoAvance = t.avance >= 100 ? 0 : 100;
+  try {
+    const res = await fetch(`/api/proyectos/tareas/${tid}`, {
+      method: 'PUT', credentials: 'same-origin',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        nombre: t.nombre, descripcion: t.descripcion,
+        responsables: t.responsables,
+        fecha_inicio: t.fecha_inicio, fecha_fin: t.fecha_fin,
+        avance: nuevoAvance,
+        estado: nuevoAvance >= 100 ? 'completado' : 'en_curso',
+        prioridad: t.prioridad
+      })
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const proyecto = await res.json();
+    _replaceProyecto(proyecto);
+    abrirDetalle(pid);
+    document.querySelectorAll('.detail-tab').forEach(t => t.classList.toggle('active', t.dataset.dt === 'tareas'));
+    ['dt-info','dt-tareas','dt-comentarios','dt-dependencias'].forEach(id => $(id).classList.toggle('active', id==='dt-tareas'));
+    renderStats();
+    if (STATE.view !== 'lista') renderVistaActiva();
+  } catch (err) {
+    showToast('Error: ' + err.message, 'error');
+  }
+}
+
+async function toggleCompletarSubtarea(pid, tid, sid) {
+  const p = PROYECTOS.find(x => x.id === pid);
+  const t = p.tareas.find(x => x.id === tid);
+  const s = t.subtareas.find(x => x.id === sid);
+  if (!s) return;
+  const nuevoAvance = s.avance >= 100 ? 0 : 100;
+  try {
+    const res = await fetch(`/api/proyectos/subtareas/${sid}`, {
+      method: 'PUT', credentials: 'same-origin',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        nombre: s.nombre, descripcion: s.descripcion,
+        responsables: s.responsables,
+        fecha_inicio: s.fecha_inicio, fecha_fin: s.fecha_fin,
+        avance: nuevoAvance,
+        estado: nuevoAvance >= 100 ? 'completado' : 'en_curso',
+        prioridad: s.prioridad
+      })
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const proyecto = await res.json();
+    _replaceProyecto(proyecto);
+    abrirDetalle(pid);
+    document.querySelectorAll('.detail-tab').forEach(t => t.classList.toggle('active', t.dataset.dt === 'tareas'));
+    ['dt-info','dt-tareas','dt-comentarios','dt-dependencias'].forEach(id => $(id).classList.toggle('active', id==='dt-tareas'));
+    renderStats();
+    if (STATE.view !== 'lista') renderVistaActiva();
+  } catch (err) {
+    showToast('Error: ' + err.message, 'error');
+  }
+}
+
+async function eliminarTarea(pid, tid) {
+  if (!confirm('¿Eliminar esta tarea y todas sus subtareas?')) return;
+  try {
+    const res = await fetch(`/api/proyectos/tareas/${tid}`, { method: 'DELETE', credentials: 'same-origin' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const proyecto = await res.json();
+    _replaceProyecto(proyecto);
+    abrirDetalle(pid);
+    document.querySelectorAll('.detail-tab').forEach(t => t.classList.toggle('active', t.dataset.dt === 'tareas'));
+    ['dt-info','dt-tareas','dt-comentarios','dt-dependencias'].forEach(id => $(id).classList.toggle('active', id==='dt-tareas'));
+    renderStats();
+    if (STATE.view !== 'lista') renderVistaActiva();
+    showToast('✓ Tarea eliminada', 'success');
+  } catch (err) {
+    showToast('Error: ' + err.message, 'error');
+  }
+}
+
+async function eliminarSubtarea(pid, tid, sid) {
+  if (!confirm('¿Eliminar esta subtarea?')) return;
+  try {
+    const res = await fetch(`/api/proyectos/subtareas/${sid}`, { method: 'DELETE', credentials: 'same-origin' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const proyecto = await res.json();
+    _replaceProyecto(proyecto);
+    abrirDetalle(pid);
+    document.querySelectorAll('.detail-tab').forEach(t => t.classList.toggle('active', t.dataset.dt === 'tareas'));
+    ['dt-info','dt-tareas','dt-comentarios','dt-dependencias'].forEach(id => $(id).classList.toggle('active', id==='dt-tareas'));
+    renderStats();
+    showToast('✓ Subtarea eliminada', 'success');
+  } catch (err) {
+    showToast('Error: ' + err.message, 'error');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  MODAL CREAR/EDITAR TAREA o SUBTAREA
+// ═══════════════════════════════════════════════════════════════════
+let TAREA_CTX = { pid: null, tid: null, sid: null, modo: null };  // crear/editar tarea/subtarea
+
+function abrirCrearTarea(pid) {
+  const p = PROYECTOS.find(x => x.id === pid);
+  TAREA_CTX = { pid, tid: null, sid: null, modo: 'crear-tarea' };
+  $('mt-title').textContent = '＋ Nueva tarea: ' + p.nombre;
+  RESP_SELECCIONADOS = new Set(p.responsables.slice(0,1));
+  $('mt-nombre').value = '';
+  $('mt-fecha-inicio').value = dx(0);
+  $('mt-fecha-fin').value = dx(7);
+  $('mt-avance').value = 0;
+  $('mt-estado').value = 'planeado';
+  $('mt-prioridad').value = 'media';
+  $('mt-descripcion').value = '';
+  renderMultiRespTarea();
+  $('modal-tarea').classList.add('open');
+}
+
+function abrirEditarTarea(pid, tid) {
+  const p = PROYECTOS.find(x => x.id === pid);
+  const t = p.tareas.find(x => x.id === tid);
+  TAREA_CTX = { pid, tid, sid: null, modo: 'editar-tarea' };
+  $('mt-title').textContent = '✏️ Editar tarea: ' + t.nombre;
+  RESP_SELECCIONADOS = new Set(t.responsables);
+  $('mt-nombre').value = t.nombre;
+  $('mt-fecha-inicio').value = t.fecha_inicio;
+  $('mt-fecha-fin').value = t.fecha_fin;
+  $('mt-avance').value = (t.subtareas?.length>0) ? calcAvance(t) : t.avance;
+  $('mt-estado').value = t.estado;
+  $('mt-prioridad').value = t.prioridad;
+  $('mt-descripcion').value = t.descripcion || '';
+  // Bloquear avance si tiene subtareas
+  const wrap = $('mt-avance-wrap');
+  if ((t.subtareas||[]).length > 0) wrap.classList.add('field-locked');
+  else wrap.classList.remove('field-locked');
+  renderMultiRespTarea();
+  $('modal-tarea').classList.add('open');
+}
+
+function abrirCrearSubtarea(pid, tid) {
+  const p = PROYECTOS.find(x => x.id === pid);
+  const t = p.tareas.find(x => x.id === tid);
+  TAREA_CTX = { pid, tid, sid: null, modo: 'crear-subtarea' };
+  $('mt-title').textContent = '＋ Nueva subtarea de: ' + t.nombre;
+  RESP_SELECCIONADOS = new Set(t.responsables.slice(0,1));
+  $('mt-nombre').value = '';
+  $('mt-fecha-inicio').value = t.fecha_inicio;
+  $('mt-fecha-fin').value = t.fecha_fin;
+  $('mt-avance').value = 0;
+  $('mt-estado').value = 'planeado';
+  $('mt-prioridad').value = t.prioridad;
+  $('mt-descripcion').value = '';
+  $('mt-avance-wrap').classList.remove('field-locked');
+  renderMultiRespTarea();
+  $('modal-tarea').classList.add('open');
+}
+
+function abrirEditarSubtarea(pid, tid, sid) {
+  const p = PROYECTOS.find(x => x.id === pid);
+  const t = p.tareas.find(x => x.id === tid);
+  const s = t.subtareas.find(x => x.id === sid);
+  TAREA_CTX = { pid, tid, sid, modo: 'editar-subtarea' };
+  $('mt-title').textContent = '✏️ Editar subtarea: ' + s.nombre;
+  RESP_SELECCIONADOS = new Set(s.responsables);
+  $('mt-nombre').value = s.nombre;
+  $('mt-fecha-inicio').value = s.fecha_inicio;
+  $('mt-fecha-fin').value = s.fecha_fin;
+  $('mt-avance').value = s.avance;
+  $('mt-estado').value = s.estado;
+  $('mt-prioridad').value = s.prioridad;
+  $('mt-descripcion').value = s.descripcion || '';
+  $('mt-avance-wrap').classList.remove('field-locked');
+  renderMultiRespTarea();
+  $('modal-tarea').classList.add('open');
+}
+
+function renderMultiRespTarea() {
+  $('mt-multi-resp').innerHTML = USUARIOS.map(u => {
+    const sel = RESP_SELECCIONADOS.has(u.usuario);
+    const ini = u.nombre.split(' ').map(s => s[0]).slice(0,2).join('');
+    const subtxt = u.rol + (u.region !== '-' && u.region !== 'Nacional' ? ' · ' + u.region : '');
+    return `
+      <span class="multi-resp-chip ${sel?'selected':''}" onclick="toggleRespTarea('${u.usuario}')" title="${esc(u.email)}">
+        <span class="avatar-mini color-${u.avatar_color}" style="width:24px;height:24px;font-size:10px;margin:0">${ini}</span>
+        <div style="display:flex;flex-direction:column;align-items:flex-start;line-height:1.2">
+          <span style="font-weight:700">${esc(u.nombre)}</span>
+          <span style="font-size:9.5px;opacity:0.85">${esc(subtxt)}</span>
+        </div>
+      </span>
+    `;
+  }).join('');
+}
+function toggleRespTarea(id) {
+  if (RESP_SELECCIONADOS.has(id)) RESP_SELECCIONADOS.delete(id);
+  else RESP_SELECCIONADOS.add(id);
+  renderMultiRespTarea();
+}
+
+async function guardarTarea() {
+  const nombre = $('mt-nombre').value.trim();
+  if (!nombre) { showToast('El nombre es obligatorio', 'error'); return; }
+  const fechaIni = $('mt-fecha-inicio').value;
+  const fechaFin = $('mt-fecha-fin').value;
+  if (!fechaIni || !fechaFin) { showToast('Fechas obligatorias', 'error'); return; }
+  if (fechaFin < fechaIni) { showToast('Fecha fin ≥ inicio', 'error'); return; }
+  const responsables = Array.from(RESP_SELECCIONADOS);
+  if (responsables.length === 0) { showToast('Al menos un responsable', 'error'); return; }
+
+  const datos = {
+    nombre, descripcion: $('mt-descripcion').value.trim(),
+    responsables, fecha_inicio: fechaIni, fecha_fin: fechaFin,
+    avance: parseInt($('mt-avance').value) || 0,
+    estado: $('mt-estado').value, prioridad: $('mt-prioridad').value
+  };
+
+  try {
+    let url, method;
+    if (TAREA_CTX.modo === 'crear-tarea') {
+      url = `/api/proyectos/${TAREA_CTX.pid}/tareas`; method = 'POST';
+    } else if (TAREA_CTX.modo === 'editar-tarea') {
+      url = `/api/proyectos/tareas/${TAREA_CTX.tid}`; method = 'PUT';
+    } else if (TAREA_CTX.modo === 'crear-subtarea') {
+      url = `/api/proyectos/tareas/${TAREA_CTX.tid}/subtareas`; method = 'POST';
+    } else if (TAREA_CTX.modo === 'editar-subtarea') {
+      url = `/api/proyectos/subtareas/${TAREA_CTX.sid}`; method = 'PUT';
+    }
+    const res = await fetch(url, {
+      method, credentials: 'same-origin',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(datos)
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(()=>({}));
+      throw new Error(err.error || `HTTP ${res.status}`);
+    }
+    const proyecto = await res.json();
+    _replaceProyecto(proyecto);
+    if (TAREA_CTX.modo === 'crear-subtarea') TAREA_EXPANDED.add(TAREA_CTX.tid);
+    showToast(TAREA_CTX.modo.startsWith('crear') ? '✓ Creado' : '✓ Actualizado', 'success');
+    cerrarModal('modal-tarea');
+    abrirDetalle(TAREA_CTX.pid);
+    document.querySelectorAll('.detail-tab').forEach(t => t.classList.toggle('active', t.dataset.dt === 'tareas'));
+    ['dt-info','dt-tareas','dt-comentarios','dt-dependencias'].forEach(id => $(id).classList.toggle('active', id==='dt-tareas'));
+    renderStats();
+    if (STATE.view !== 'lista') renderVistaActiva();
+  } catch (err) {
+    showToast('Error: ' + err.message, 'error');
+    console.error(err);
+  }
+}
+
+function editarDesdeDetalle() {
+  const id = STATE.detalle_id;
+  cerrarModal('modal-detalle');
+  setTimeout(() => abrirEditar(id), 200);
+}
+
+async function agregarComentario() {
+  const input = $('comentario-input');
+  const texto = input.value.trim();
+  if (!texto) return;
+  try {
+    const res = await fetch(`/api/proyectos/${STATE.detalle_id}/comentarios`, {
+      method: 'POST', credentials: 'same-origin',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ texto })
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const proyecto = await res.json();
+    _replaceProyecto(proyecto);
+    abrirDetalle(STATE.detalle_id);
+    document.querySelectorAll('.detail-tab').forEach(t => t.classList.toggle('active', t.dataset.dt === 'comentarios'));
+    ['dt-info','dt-tareas','dt-comentarios','dt-dependencias'].forEach(id => $(id).classList.toggle('active', id==='dt-comentarios'));
+    showToast('✓ Comentario agregado', 'success');
+  } catch (err) {
+    showToast('Error: ' + err.message, 'error');
+  }
+}
+
+function cerrarModal(id) { $(id).classList.remove('open'); }
+
+// ═══════════════════════════════════════════════════════════════════
+//  NOTIFICACIONES (correo + WhatsApp)
+// ═══════════════════════════════════════════════════════════════════
+let NOTIF_CTX = { destinatarios: [], proyecto_id: null };
+
+function abrirNotificar(scope) {
+  // scope: 'proyecto' (notificar a responsables del proyecto)
+  const p = PROYECTOS.find(x => x.id === STATE.detalle_id);
+  if (!p) return;
+  NOTIF_CTX.proyecto_id = p.id;
+  NOTIF_CTX.destinatarios = [...(p.responsables || [])];
+
+  // Asunto y mensaje pre-llenados
+  $('notif-asunto').value = `[Proyectos] ${p.nombre}`;
+  const stats = statsTareas(p);
+  const avance = (p.tareas?.length > 0) ? calcAvance(p) : p.avance;
+  $('notif-mensaje').value =
+`Hola,
+
+Te comparto la actualización del proyecto "${p.nombre}":
+
+• Estado: ${LBL_ESTADO[p.estado]}
+• Avance: ${avance}%
+• Fechas: ${fmtFecha(p.fecha_inicio)} → ${fmtFecha(p.fecha_fin)}
+${stats.total > 0 ? `• Tareas: ${stats.completadas}/${stats.total} completadas\n` : ''}
+${stats.atrasadas > 0 ? `⚠️ ${stats.atrasadas} tareas atrasadas requieren atención.\n\n` : '\n'}
+Saludos,
+${getUsuario('rgonzalez')?.nombre || 'Centro de Soporte'}`;
+
+  renderDestinatarios();
+  $('modal-notificar').classList.add('open');
+}
+
+function renderDestinatarios() {
+  $('notif-dest').innerHTML = NOTIF_CTX.destinatarios.map(uid => {
+    const u = getUsuario(uid);
+    if (!u) return '';
+    const ini = u.nombre.split(' ').map(s => s[0]).slice(0,2).join('');
+    const tieneTel = u.telefono ? '💬' : '';
+    const tieneMail = u.email ? '📧' : '';
+    return `
+      <span style="display:inline-flex;align-items:center;gap:8px;background:white;border:1px solid var(--dough3);border-radius:20px;padding:5px 12px 5px 5px;font-size:11.5px">
+        <span class="avatar-mini color-${u.avatar_color}" style="width:24px;height:24px;font-size:10px">${ini}</span>
+        <span>
+          <b>${esc(u.nombre)}</b>
+          <span style="color:var(--lava2);margin-left:4px">${tieneMail}${tieneTel}</span>
+        </span>
+        <button onclick="quitarDestinatario('${uid}')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:14px;padding:0 0 0 4px">×</button>
+      </span>
+    `;
+  }).join('') + (NOTIF_CTX.destinatarios.length === 0 ? '<i style="color:var(--lava2)">Sin destinatarios. Agrega responsables al proyecto primero.</i>' : '');
+}
+
+function quitarDestinatario(uid) {
+  NOTIF_CTX.destinatarios = NOTIF_CTX.destinatarios.filter(d => d !== uid);
+  renderDestinatarios();
+}
+
+async function enviarNotifCampana() {
+  if (NOTIF_CTX.destinatarios.length === 0) { showToast('Sin destinatarios', 'error'); return; }
+  const titulo  = $('notif-asunto').value || 'Notificación de proyecto';
+  const detalle = $('notif-mensaje').value || '';
+  try {
+    const res = await fetch('/api/proyectos/notificaciones', {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        destinatarios: NOTIF_CTX.destinatarios,
+        proyecto_id: NOTIF_CTX.proyecto_id,
+        titulo: titulo,
+        detalle: detalle,
+        tipo: 'asignado'
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Error');
+    showToast(`🔔 Alerta enviada a ${data.creadas} persona(s)`, 'success');
+    cerrarModal('modal-notificar');
+  } catch (err) {
+    showToast('Error: ' + err.message, 'error');
+  }
+}
+
+function enviarNotifCorreo() {
+  if (NOTIF_CTX.destinatarios.length === 0) { showToast('Sin destinatarios', 'error'); return; }
+  const asunto = $('notif-asunto').value;
+  const mensaje = $('notif-mensaje').value;
+  // Construir lista de emails
+  const emails = NOTIF_CTX.destinatarios
+    .map(uid => getUsuario(uid)?.email)
+    .filter(Boolean);
+  if (emails.length === 0) { showToast('Ningún destinatario tiene correo registrado', 'error'); return; }
+  const link = `mailto:${emails.join(',')}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(mensaje)}`;
+  window.location.href = link;
+  showToast(`✓ Correo abierto para ${emails.length} destinatario${emails.length>1?'s':''}`, 'success');
+  cerrarModal('modal-notificar');
+}
+
+function enviarNotifWhatsApp() {
+  if (NOTIF_CTX.destinatarios.length === 0) { showToast('Sin destinatarios', 'error'); return; }
+  const mensaje = $('notif-mensaje').value;
+  const conTelefono = NOTIF_CTX.destinatarios.filter(uid => getUsuario(uid)?.telefono);
+  if (conTelefono.length === 0) { showToast('Ningún destinatario tiene teléfono registrado', 'error'); return; }
+
+  // Abrir 1 ventana de WhatsApp por persona (con delay para evitar bloqueo del browser)
+  conTelefono.forEach((uid, i) => {
+    const link = waLink(uid, mensaje);
+    if (link) {
+      setTimeout(() => window.open(link, '_blank'), i * 500);  // delay 500ms entre c/u
+    }
+  });
+  showToast(`✓ Abriendo ${conTelefono.length} chat${conTelefono.length>1?'s':''} de WhatsApp`, 'success');
+  cerrarModal('modal-notificar');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  EXCEL: import/export
+// ═══════════════════════════════════════════════════════════════════
+function abrirImportExcel() {
+  STATE.excel_preview = null;
+  $('excel-preview-wrap').style.display = 'none';
+  $('btn-confirmar-import').disabled = true;
+  $('file-input').value = '';
+  $('modal-import').classList.add('open');
+}
+
+function procesarArchivoExcel(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data, {type:'array'});
+      const sheet = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(sheet, {raw:false, dateNF:'yyyy-mm-dd'});
+      if (rows.length === 0) { showToast('El archivo está vacío', 'error'); return; }
+      STATE.excel_preview = rows;
+      const cols = Object.keys(rows[0]);
+      $('excel-preview').innerHTML = `<table>
+        <thead><tr>${cols.map(c => `<th>${esc(c)}</th>`).join('')}</tr></thead>
+        <tbody>${rows.slice(0,10).map(r => `<tr>${cols.map(c => `<td>${esc(r[c]||'')}</td>`).join('')}</tr>`).join('')}</tbody>
+      </table>`;
+      $('preview-count').textContent = rows.length;
+      $('excel-preview-wrap').style.display = 'block';
+      $('btn-confirmar-import').disabled = false;
+      showToast(`✓ ${rows.length} filas detectadas`, 'success');
+    } catch (err) {
+      showToast('Error leyendo el archivo: '+err.message, 'error');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+async function confirmarImport() {
+  if (!STATE.excel_preview) return;
+  cerrarModal('modal-import');
+  showToast('⏳ Importando proyectos...', 'success');
+  let importados = 0, errores = 0;
+  for (const r of STATE.excel_preview) {
+    try {
+      if (!r.nombre || !r.fecha_inicio || !r.fecha_fin) { errores++; continue; }
+      // Buscar responsables (puede venir separado por coma o un solo nombre)
+      let resps = [USUARIO_ACTUAL];
+      const respField = r.responsables || r.responsable;
+      if (respField) {
+        const nombres = String(respField).split(',').map(s => s.trim());
+        const ids = nombres.map(n => {
+          const m = USUARIOS.find(x => x.usuario === n || (x.nombre || '').toLowerCase() === n.toLowerCase());
+          return m ? m.usuario : null;
+        }).filter(Boolean);
+        if (ids.length > 0) resps = ids;
+      }
+      const datos = {
+        nombre: String(r.nombre),
+        tipo: ['general','tienda','auditoria'].includes(r.tipo) ? r.tipo : 'general',
+        responsables: resps,
+        fecha_inicio: String(r.fecha_inicio).substring(0,10),
+        fecha_fin: String(r.fecha_fin).substring(0,10),
+        avance: parseInt(r.avance) || 0,
+        estado: ['planeado','en_curso','atrasado','completado','cancelado'].includes(r.estado) ? r.estado : 'planeado',
+        prioridad: ['baja','media','alta','critica'].includes(r.prioridad) ? r.prioridad : 'media',
+        color: r.color || '#0090E2',
+        descripcion: r.descripcion || '',
+        ceco: r.ceco || null
+      };
+      const res = await fetch('/api/proyectos', {
+        method: 'POST', credentials: 'same-origin',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(datos)
+      });
+      if (res.ok) {
+        const proyecto = await res.json();
+        PROYECTOS.unshift(proyecto);
+        importados++;
+      } else { errores++; }
+    } catch (e) { errores++; console.error(e); }
+  }
+  renderTodo();
+  showToast(`✓ ${importados} proyectos importados${errores ? ` (${errores} errores)` : ''}`, 'success');
+}
+
+function exportarExcel() {
+  // Hoja 1: Proyectos
+  const dataP = PROYECTOS.map(p => ({
+    id: p.id, nombre: p.nombre, tipo: p.tipo,
+    responsables: nombresResp(p.responsables),
+    fecha_inicio: p.fecha_inicio, fecha_fin: p.fecha_fin,
+    avance: p.tareas?.length>0 ? calcAvance(p) : p.avance,
+    estado: p.estado, prioridad: p.prioridad,
+    color: p.color, ceco: p.ceco || '', descripcion: p.descripcion || '',
+    num_tareas: (p.tareas||[]).length,
+    num_subtareas: (p.tareas||[]).reduce((s,t)=>s+(t.subtareas||[]).length, 0),
+    num_comentarios: (p.comentarios||[]).length
+  }));
+  // Hoja 2: Tareas (vinculadas a proyecto por proyecto_id)
+  const dataT = [];
+  PROYECTOS.forEach(p => {
+    (p.tareas||[]).forEach(t => {
+      dataT.push({
+        proyecto_id: p.id, proyecto_nombre: p.nombre,
+        tarea_id: t.id, tarea_nombre: t.nombre,
+        responsables: nombresResp(t.responsables),
+        fecha_inicio: t.fecha_inicio, fecha_fin: t.fecha_fin,
+        avance: (t.subtareas?.length>0) ? calcAvance(t) : t.avance,
+        estado: t.estado, prioridad: t.prioridad,
+        num_subtareas: (t.subtareas||[]).length,
+        descripcion: t.descripcion || ''
+      });
+    });
+  });
+  // Hoja 3: Subtareas
+  const dataS = [];
+  PROYECTOS.forEach(p => {
+    (p.tareas||[]).forEach(t => {
+      (t.subtareas||[]).forEach(s => {
+        dataS.push({
+          proyecto_id: p.id, proyecto_nombre: p.nombre,
+          tarea_id: t.id, tarea_nombre: t.nombre,
+          subtarea_id: s.id, subtarea_nombre: s.nombre,
+          responsables: nombresResp(s.responsables),
+          fecha_inicio: s.fecha_inicio, fecha_fin: s.fecha_fin,
+          avance: s.avance, estado: s.estado, prioridad: s.prioridad,
+          descripcion: s.descripcion || ''
+        });
+      });
+    });
+  });
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(dataP), 'Proyectos');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(dataT), 'Tareas');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(dataS), 'Subtareas');
+  const fecha = new Date().toISOString().substring(0,10);
+  XLSX.writeFile(wb, `proyectos_${fecha}.xlsx`);
+  showToast(`✓ Excel descargado: ${dataP.length} proyectos, ${dataT.length} tareas, ${dataS.length} subtareas`, 'success');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  POWERPOINT — Reporte Ejecutivo Brandeado
+// ═══════════════════════════════════════════════════════════════════
+// Paleta de marca para PPT (sin "#")
+const PPT_BLUE_DK = '003D6B';
+const PPT_BLUE_MD = '005C91';
+const PPT_BLUE    = '0090E2';
+const PPT_RED     = 'E70000';
+const PPT_RED_DK  = '910000';
+const PPT_DOUGH1  = 'FEFAF6';
+const PPT_DOUGH2  = 'FAF2E9';
+const PPT_DOUGH3  = 'F0DECC';
+const PPT_LAVA    = '8F6C49';
+const PPT_DARK    = '472B10';
+const PPT_GREEN   = '00A650';
+const PPT_ORANGE  = 'FF8C00';
+const PPT_WHITE   = 'FFFFFF';
+
+// Helper: agregar header brandeado a una slide
+function pptAddHeader(slide, titulo) {
+  // Banda azul superior con logo
+  slide.addShape('rect', { x: 0, y: 0, w: 13.33, h: 0.55, fill: { color: PPT_BLUE_DK }, line: { color: PPT_BLUE_DK } });
+  slide.addImage({ data: IMG_LOGO, x: 0.2, y: 0.07, w: 0.42, h: 0.42 });
+  slide.addText(titulo, {
+    x: 0.7, y: 0.07, w: 11, h: 0.42,
+    fontSize: 16, bold: true, color: PPT_WHITE, fontFace: 'Calibri', valign: 'middle'
+  });
+  slide.addText(BRAND.nombre, {
+    x: 11.7, y: 0.07, w: 1.5, h: 0.42,
+    fontSize: 9, color: PPT_DOUGH3, fontFace: 'Calibri', valign: 'middle', align: 'right'
+  });
+}
+
+// Helper: footer brandeado
+function pptAddFooter(slide, numSlide, totalSlides) {
+  slide.addShape('rect', { x: 0, y: 7.3, w: 13.33, h: 0.2, fill: { color: PPT_RED }, line: { color: PPT_RED } });
+  slide.addText(`${new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'})}  ·  Página ${numSlide} de ${totalSlides}`, {
+    x: 0, y: 7.5, w: 13.33, h: 0.3,
+    fontSize: 9, color: PPT_LAVA, fontFace: 'Calibri', align: 'center', italic: true
+  });
+}
+
+async function descargarPPTEjecutivo() {
+  // Verificación de librería
+  if (typeof PptxGenJS === 'undefined') {
+    showToast('❌ Librería PptxGenJS no cargó. Revisa tu conexión a internet.', 'error');
+    console.error('PptxGenJS no está definido. Verifica que el CDN cargó correctamente.');
+    alert('❌ Error: La librería para generar PPT no está disponible.\n\nPosibles causas:\n• Sin internet (las librerías se descargan de CDN)\n• Firewall corporativo bloqueando jsdelivr.net\n• Adblocker bloqueando el script\n\nAbre la consola del navegador (F12) para ver más detalles.');
+    return;
+  }
+
+  showToast('⏳ Generando PowerPoint ejecutivo...', 'success');
+
+  try {
+    const pptx = new PptxGenJS();
+    pptx.author = BRAND.nombre;
+    pptx.company = BRAND.nombre;
+    pptx.title = "Reporte Ejecutivo de Proyectos";
+    pptx.layout = 'LAYOUT_WIDE';   // 13.33 x 7.5 in (16:9)
+
+  const arr = getProyectosFiltrados();
+  const fecha = new Date().toLocaleDateString('es-MX', {day:'2-digit', month:'long', year:'numeric'});
+
+  // Stats globales
+  const total = arr.length;
+  const enCurso = arr.filter(p => p.estado === 'en_curso').length;
+  const atrasados = arr.filter(p => p.estado === 'atrasado').length;
+  const completados = arr.filter(p => p.estado === 'completado').length;
+  const criticos = arr.filter(p => p.prioridad === 'critica' && p.estado !== 'completado').length;
+
+  const TOTAL_SLIDES = 5;
+  let numSlide = 0;
+
+  // ════════ SLIDE 1: PORTADA ════════
+  numSlide++;
+  let s1 = pptx.addSlide();
+  s1.background = { color: PPT_BLUE_DK };
+  // Banda roja decorativa diagonal
+  s1.addShape('rect', { x: 0, y: 0, w: 13.33, h: 0.3, fill: { color: PPT_RED } });
+  s1.addShape('rect', { x: 0, y: 7.2, w: 13.33, h: 0.3, fill: { color: PPT_RED } });
+  // Logo grande centrado
+  s1.addImage({ data: IMG_LOGO, x: 5.97, y: 1.0, w: 1.4, h: 1.4 });
+  // Título
+  s1.addText("REPORTE EJECUTIVO", {
+    x: 0, y: 2.7, w: 13.33, h: 0.7,
+    fontSize: 36, bold: true, color: PPT_WHITE, fontFace: 'Calibri', align: 'center', charSpacing: 4
+  });
+  s1.addText("Tablero de Proyectos", {
+    x: 0, y: 3.4, w: 13.33, h: 0.5,
+    fontSize: 22, color: PPT_DOUGH3, fontFace: 'Calibri', align: 'center'
+  });
+  // Línea decorativa
+  s1.addShape('rect', { x: 5.665, y: 4.1, w: 2, h: 0.05, fill: { color: PPT_RED } });
+  // Stats portada
+  s1.addText(`${total} proyectos en seguimiento`, {
+    x: 0, y: 4.4, w: 13.33, h: 0.4,
+    fontSize: 18, color: PPT_WHITE, fontFace: 'Calibri', align: 'center', bold: true
+  });
+  s1.addText(`Generado: ${fecha}`, {
+    x: 0, y: 6.4, w: 13.33, h: 0.3,
+    fontSize: 12, color: PPT_DOUGH3, fontFace: 'Calibri', align: 'center'
+  });
+  s1.addText(BRAND.producto + " · " + BRAND.nombre, {
+    x: 0, y: 6.7, w: 13.33, h: 0.3,
+    fontSize: 11, italic: true, color: PPT_DOUGH3, fontFace: 'Calibri', align: 'center'
+  });
+  
+
+  // ════════ SLIDE 2: RESUMEN EJECUTIVO ════════
+  numSlide++;
+  let s2 = pptx.addSlide();
+  s2.background = { color: PPT_DOUGH1 };
+  pptAddHeader(s2, '📊 Resumen Ejecutivo');
+  pptAddFooter(s2, numSlide, TOTAL_SLIDES);
+
+  // 5 stat cards grandes
+  const statsData = [
+    { label: 'TOTAL', value: total, color: PPT_BLUE, sub: 'proyectos' },
+    { label: 'EN CURSO', value: enCurso, color: PPT_ORANGE, sub: 'activos' },
+    { label: 'ATRASADOS', value: atrasados, color: PPT_RED, sub: 'requieren atención' },
+    { label: 'COMPLETADOS', value: completados, color: PPT_GREEN, sub: 'cerrados' },
+    { label: 'CRÍTICOS', value: criticos, color: PPT_RED_DK, sub: 'prioridad alta' },
+  ];
+  const cardW = 2.4, cardH = 1.6, gap = 0.15;
+  const totalW = statsData.length * cardW + (statsData.length - 1) * gap;
+  const startX = (13.33 - totalW) / 2;
+  statsData.forEach((stat, i) => {
+    const x = startX + i * (cardW + gap);
+    s2.addShape('rect', { x, y: 1.1, w: cardW, h: cardH, fill: { color: PPT_WHITE }, line: { color: PPT_DOUGH3, width: 1 } });
+    s2.addShape('rect', { x, y: 1.1, w: cardW, h: 0.1, fill: { color: stat.color } });
+    s2.addText(stat.label, { x, y: 1.25, w: cardW, h: 0.3, fontSize: 10, bold: true, color: PPT_LAVA, fontFace: 'Calibri', align: 'center', charSpacing: 2 });
+    s2.addText(String(stat.value), { x, y: 1.55, w: cardW, h: 0.7, fontSize: 36, bold: true, color: PPT_BLUE_DK, fontFace: 'Calibri', align: 'center' });
+    s2.addText(stat.sub, { x, y: 2.3, w: cardW, h: 0.3, fontSize: 10, color: PPT_LAVA, fontFace: 'Calibri', align: 'center', italic: true });
+  });
+
+  // Subsección: distribución por tipo
+  s2.addText('DISTRIBUCIÓN POR TIPO', {
+    x: 0.5, y: 3.0, w: 6, h: 0.3,
+    fontSize: 12, bold: true, color: PPT_BLUE_DK, fontFace: 'Calibri', charSpacing: 1
+  });
+  const porTipo = ['general','tienda','auditoria'].map(t => ({
+    tipo: LBL_TIPO[t],
+    count: arr.filter(p => p.tipo === t).length
+  }));
+  porTipo.forEach((d, i) => {
+    s2.addText(`• ${d.tipo}`, { x: 0.5, y: 3.4 + i*0.35, w: 4, h: 0.3, fontSize: 13, color: PPT_DARK, fontFace: 'Calibri' });
+    s2.addText(String(d.count), { x: 4.5, y: 3.4 + i*0.35, w: 1, h: 0.3, fontSize: 13, bold: true, color: PPT_BLUE_DK, fontFace: 'Calibri' });
+  });
+
+  // Subsección: tareas globales
+  const tareasGlob = arr.reduce((acc, p) => {
+    const st = statsTareas(p);
+    return { total: acc.total + st.total, completadas: acc.completadas + st.completadas, atrasadas: acc.atrasadas + st.atrasadas };
+  }, { total: 0, completadas: 0, atrasadas: 0 });
+  s2.addText('TAREAS Y SUBTAREAS', {
+    x: 7.0, y: 3.0, w: 6, h: 0.3,
+    fontSize: 12, bold: true, color: PPT_BLUE_DK, fontFace: 'Calibri', charSpacing: 1
+  });
+  s2.addText(`• Total: ${tareasGlob.total}`, { x: 7.0, y: 3.4, w: 5, h: 0.3, fontSize: 13, color: PPT_DARK, fontFace: 'Calibri' });
+  s2.addText(`• Completadas: ${tareasGlob.completadas} (${tareasGlob.total ? Math.round(tareasGlob.completadas/tareasGlob.total*100) : 0}%)`, { x: 7.0, y: 3.75, w: 5, h: 0.3, fontSize: 13, color: PPT_GREEN, fontFace: 'Calibri', bold: true });
+  s2.addText(`• Atrasadas: ${tareasGlob.atrasadas}`, { x: 7.0, y: 4.1, w: 5, h: 0.3, fontSize: 13, color: tareasGlob.atrasadas > 0 ? PPT_RED : PPT_DARK, fontFace: 'Calibri', bold: tareasGlob.atrasadas > 0 });
+
+  // Bloque de análisis
+  s2.addShape('roundRect', { x: 2.1, y: 5.5, w: 10.7, h: 1.4, rectRadius: 0.15, fill: { color: PPT_BLUE }, line: { color: PPT_BLUE } });
+  s2.addShape('roundRect', { x: 2.0, y: 5.55, w: 0.2, h: 0.2, fill: { color: PPT_BLUE }, line: { color: PPT_BLUE } });   // colita del bocadillo
+  s2.addText("💡 Análisis", { x: 2.3, y: 5.6, w: 10.3, h: 0.3, fontSize: 11, bold: true, color: PPT_WHITE, fontFace: 'Calibri', charSpacing: 1 });
+  let msgAnalisis = `El portafolio tiene ${total} proyectos. `;
+  if (atrasados > 0) msgAnalisis += `⚠️ ${atrasados} atrasados requieren atención prioritaria. `;
+  if (criticos > 0) msgAnalisis += `${criticos} de prioridad crítica activos. `;
+  if (atrasados === 0) msgAnalisis += `Todos los proyectos avanzan según calendario. `;
+  msgAnalisis += `Tasa de completitud de tareas: ${tareasGlob.total ? Math.round(tareasGlob.completadas/tareasGlob.total*100) : 0}%.`;
+  s2.addText(msgAnalisis, { x: 2.3, y: 5.95, w: 10.3, h: 0.85, fontSize: 12, color: PPT_WHITE, fontFace: 'Calibri', valign: 'top' });
+
+  // ════════ SLIDE 3: TOP ATRASADOS ════════
+  numSlide++;
+  let s3 = pptx.addSlide();
+  s3.background = { color: PPT_DOUGH1 };
+  pptAddHeader(s3, '⚠️ Top Atrasados y Críticos');
+  pptAddFooter(s3, numSlide, TOTAL_SLIDES);
+
+  const enAlerta = arr.filter(p => p.estado === 'atrasado' || (p.prioridad === 'critica' && p.estado !== 'completado'))
+    .sort((a, b) => {
+      if (a.estado === 'atrasado' && b.estado !== 'atrasado') return -1;
+      if (a.estado !== 'atrasado' && b.estado === 'atrasado') return 1;
+      return new Date(a.fecha_fin) - new Date(b.fecha_fin);
+    })
+    .slice(0, 8);
+
+  if (enAlerta.length === 0) {
+    s3.addText('✅ Sin proyectos atrasados ni críticos pendientes', {
+      x: 0.5, y: 3.5, w: 12.33, h: 1,
+      fontSize: 24, color: PPT_GREEN, fontFace: 'Calibri', align: 'center', bold: true
+    });
+  } else {
+    // Tabla
+    const tblRows = [[
+      { text: 'PROYECTO', options: { bold: true, color: PPT_WHITE, fill: PPT_BLUE_DK, align: 'left', valign: 'middle', fontSize: 11 }},
+      { text: 'TIPO',     options: { bold: true, color: PPT_WHITE, fill: PPT_BLUE_DK, align: 'center', valign: 'middle', fontSize: 11 }},
+      { text: 'RESPONSABLES', options: { bold: true, color: PPT_WHITE, fill: PPT_BLUE_DK, align: 'left', valign: 'middle', fontSize: 11 }},
+      { text: 'FIN',      options: { bold: true, color: PPT_WHITE, fill: PPT_BLUE_DK, align: 'center', valign: 'middle', fontSize: 11 }},
+      { text: 'AVANCE',   options: { bold: true, color: PPT_WHITE, fill: PPT_BLUE_DK, align: 'center', valign: 'middle', fontSize: 11 }},
+      { text: 'ESTADO',   options: { bold: true, color: PPT_WHITE, fill: PPT_BLUE_DK, align: 'center', valign: 'middle', fontSize: 11 }},
+    ]];
+    enAlerta.forEach((p, i) => {
+      const fillRow = i % 2 === 0 ? PPT_DOUGH1 : PPT_DOUGH2;
+      const av = p.tareas?.length > 0 ? calcAvance(p) : p.avance;
+      tblRows.push([
+        { text: p.nombre, options: { fontSize: 10, color: PPT_DARK, fill: fillRow, valign: 'middle', bold: true }},
+        { text: LBL_TIPO[p.tipo], options: { fontSize: 9, color: PPT_LAVA, fill: fillRow, align: 'center', valign: 'middle' }},
+        { text: nombresResp(p.responsables), options: { fontSize: 9, color: PPT_DARK, fill: fillRow, valign: 'middle' }},
+        { text: fmtFecha(p.fecha_fin), options: { fontSize: 10, color: PPT_DARK, fill: fillRow, align: 'center', valign: 'middle' }},
+        { text: `${av}%`, options: { fontSize: 11, bold: true, color: av >= 50 ? PPT_GREEN : PPT_RED, fill: fillRow, align: 'center', valign: 'middle' }},
+        { text: LBL_ESTADO[p.estado], options: { fontSize: 9, bold: true, color: PPT_WHITE, fill: p.estado === 'atrasado' ? PPT_RED : PPT_ORANGE, align: 'center', valign: 'middle' }},
+      ]);
+    });
+    s3.addTable(tblRows, {
+      x: 0.5, y: 1.0, w: 12.33,
+      colW: [3.5, 1.3, 3.0, 1.2, 1.3, 2.03],
+      rowH: 0.5,
+      border: { type: 'solid', pt: 0.5, color: PPT_DOUGH3 },
+      fontFace: 'Calibri'
+    });
+    // Recomendación al pie
+    s3.addShape('roundRect', { x: 0.5, y: 6.0, w: 12.33, h: 1.05, rectRadius: 0.1, fill: { color: 'FFEBEE' }, line: { color: PPT_RED, width: 1 } });
+    s3.addText('🆘 RECOMENDACIÓN', { x: 0.7, y: 6.1, w: 12, h: 0.3, fontSize: 11, bold: true, color: PPT_RED_DK, fontFace: 'Calibri', charSpacing: 1 });
+    s3.addText(`Convocar reunión con responsables de los ${enAlerta.length} proyectos en alerta. Definir acciones correctivas con fechas comprometidas en los próximos 7 días.`,
+      { x: 0.7, y: 6.4, w: 12, h: 0.6, fontSize: 11, color: PPT_DARK, fontFace: 'Calibri', valign: 'top' });
+  }
+
+  // ════════ SLIDE 4: GANTT (capturado del DOM) ════════
+  numSlide++;
+  let s4 = pptx.addSlide();
+  s4.background = { color: PPT_DOUGH1 };
+  pptAddHeader(s4, '📅 Vista Gantt — Cronograma General');
+  pptAddFooter(s4, numSlide, TOTAL_SLIDES);
+
+  // Capturar el gantt como imagen
+  try {
+    // Forzar vista gantt
+    const ganttEl = document.getElementById('gantt-container');
+    if (ganttEl && ganttEl.children.length > 0) {
+      const canvas = await html2canvas(ganttEl, { scale: 1.5, backgroundColor: '#ffffff', logging: false });
+      const imgData = canvas.toDataURL('image/png');
+      // Calcular tamaño máximo manteniendo aspecto
+      const maxW = 12.33, maxH = 5.5;
+      let w = maxW, h = canvas.height * (w / canvas.width);
+      if (h > maxH) { h = maxH; w = canvas.width * (h / canvas.height); }
+      s4.addImage({ data: imgData, x: (13.33 - w) / 2, y: 0.85, w, h });
+    } else {
+      s4.addText('Cambia primero a vista Gantt en el dashboard para capturarla aquí.', {
+        x: 0.5, y: 3.3, w: 12.33, h: 1, fontSize: 16, color: PPT_LAVA, fontFace: 'Calibri', align: 'center', italic: true
+      });
+    }
+  } catch (e) {
+    s4.addText('Error capturando Gantt: ' + e.message, { x: 0.5, y: 3.3, w: 12.33, h: 1, fontSize: 14, color: PPT_RED, fontFace: 'Calibri', align: 'center' });
+  }
+
+  // ════════ SLIDE 5: RECOMENDACIONES ════════
+  numSlide++;
+  let s5 = pptx.addSlide();
+  s5.background = { color: PPT_DOUGH1 };
+  pptAddHeader(s5, '🎯 Recomendaciones Estratégicas');
+  pptAddFooter(s5, numSlide, TOTAL_SLIDES);
+
+  const recos = [];
+  if (atrasados > 0) recos.push({ icon: '⚠️', titulo: `Acción inmediata (7 días)`, txt: `Visita técnica y plan correctivo a los ${atrasados} proyectos atrasados.`, color: PPT_RED });
+  if (criticos > 0) recos.push({ icon: '🔴', titulo: `Foco en críticos`, txt: `${criticos} proyectos de prioridad crítica activos. Asegurar recursos y comunicación con stakeholders.`, color: PPT_RED_DK });
+  if (tareasGlob.atrasadas > 5) recos.push({ icon: '📋', titulo: `Revisión de tareas`, txt: `${tareasGlob.atrasadas} tareas/subtareas atrasadas. Sesión 1:1 con responsables para destrabar.`, color: PPT_ORANGE });
+  recos.push({ icon: '📊', titulo: `Monitoreo continuo`, txt: `Revisar tablero semanalmente. Notificar avances a responsables vía correo + WhatsApp.`, color: PPT_BLUE });
+  recos.push({ icon: '🎓', titulo: `Mejora de procesos`, txt: `Identificar mejores prácticas de los ${completados} proyectos completados y replicarlas.`, color: PPT_GREEN });
+
+  recos.forEach((r, i) => {
+    const y = 1.0 + i * 1.05;
+    s5.addShape('roundRect', { x: 0.5, y, w: 12.33, h: 0.95, rectRadius: 0.1, fill: { color: PPT_WHITE }, line: { color: r.color, width: 2 } });
+    s5.addShape('rect', { x: 0.5, y, w: 0.15, h: 0.95, fill: { color: r.color } });
+    s5.addText(r.icon, { x: 0.8, y: y + 0.1, w: 0.6, h: 0.7, fontSize: 28, color: r.color, fontFace: 'Calibri', valign: 'middle' });
+    s5.addText(r.titulo, { x: 1.5, y: y + 0.1, w: 11, h: 0.35, fontSize: 13, bold: true, color: PPT_BLUE_DK, fontFace: 'Calibri' });
+    s5.addText(r.txt, { x: 1.5, y: y + 0.45, w: 11, h: 0.45, fontSize: 11, color: PPT_DARK, fontFace: 'Calibri', valign: 'top' });
+  });
+
+  // Guardar
+  const fechaFile = new Date().toISOString().substring(0,10);
+  await pptx.writeFile({ fileName: `Reporte_Proyectos_${fechaFile}.pptx` });
+  showToast('✓ PowerPoint descargado', 'success');
+  } catch (err) {
+    console.error('Error generando PPT:', err);
+    showToast('❌ Error generando PPT: ' + err.message, 'error');
+    alert('❌ Error generando PowerPoint:\n\n' + err.message + '\n\nAbre la consola del navegador (F12) para ver el error completo.');
+  }
+}
+
+// PPT por proyecto individual
+async function descargarPPTProyecto() {
+  if (typeof PptxGenJS === 'undefined') {
+    showToast('❌ Librería PptxGenJS no cargó', 'error');
+    alert('La librería para generar PPT no está disponible. Verifica tu conexión a internet.');
+    return;
+  }
+  const p = PROYECTOS.find(x => x.id === STATE.detalle_id);
+  if (!p) return;
+  showToast('⏳ Generando PPT del proyecto...', 'success');
+
+  try {
+    const pptx = new PptxGenJS();
+    pptx.layout = 'LAYOUT_WIDE';
+  const stats = statsTareas(p);
+  const avance = (p.tareas?.length > 0) ? calcAvance(p) : p.avance;
+  const fecha = new Date().toLocaleDateString('es-MX', {day:'2-digit', month:'long', year:'numeric'});
+
+  // Slide 1: portada del proyecto
+  let s1 = pptx.addSlide();
+  s1.background = { color: PPT_BLUE_DK };
+  s1.addShape('rect', { x: 0, y: 0, w: 13.33, h: 0.3, fill: { color: PPT_RED } });
+  s1.addImage({ data: IMG_LOGO, x: 5.97, y: 1.0, w: 1.4, h: 1.4 });
+  s1.addText("FICHA DE PROYECTO", { x: 0, y: 2.7, w: 13.33, h: 0.5, fontSize: 24, bold: true, color: PPT_WHITE, fontFace: 'Calibri', align: 'center', charSpacing: 4 });
+  s1.addText(p.nombre, { x: 0.5, y: 3.4, w: 12.33, h: 1.5, fontSize: 28, bold: true, color: PPT_DOUGH1, fontFace: 'Calibri', align: 'center', valign: 'middle' });
+  s1.addShape('rect', { x: 5.665, y: 5.0, w: 2, h: 0.05, fill: { color: PPT_RED } });
+  s1.addText(`Avance: ${avance}%  ·  ${LBL_ESTADO[p.estado]}`, { x: 0, y: 5.3, w: 13.33, h: 0.4, fontSize: 18, color: PPT_WHITE, fontFace: 'Calibri', align: 'center' });
+  s1.addText(`Generado: ${fecha}`, { x: 0, y: 6.7, w: 13.33, h: 0.3, fontSize: 11, color: PPT_DOUGH3, fontFace: 'Calibri', align: 'center' });
+
+  // Slide 2: detalles + tareas
+  let s2 = pptx.addSlide();
+  s2.background = { color: PPT_DOUGH1 };
+  pptAddHeader(s2, '📋 ' + p.nombre);
+  pptAddFooter(s2, 2, 2);
+
+  // Info en grid
+  const infoData = [
+    { lbl: 'TIPO', val: LBL_TIPO[p.tipo] },
+    { lbl: 'PRIORIDAD', val: LBL_PRIO[p.prioridad] },
+    { lbl: 'ESTADO', val: LBL_ESTADO[p.estado] },
+    { lbl: 'INICIO', val: fmtFecha(p.fecha_inicio) },
+    { lbl: 'FIN', val: fmtFecha(p.fecha_fin) },
+    { lbl: 'AVANCE', val: `${avance}%` },
+  ];
+  infoData.forEach((d, i) => {
+    const col = i % 3, row = Math.floor(i / 3);
+    const x = 0.5 + col * 4.27, y = 1.1 + row * 0.7;
+    s2.addShape('rect', { x, y, w: 4.1, h: 0.6, fill: { color: PPT_WHITE }, line: { color: PPT_DOUGH3 } });
+    s2.addShape('rect', { x, y, w: 0.08, h: 0.6, fill: { color: PPT_BLUE } });
+    s2.addText(d.lbl, { x: x + 0.2, y: y + 0.05, w: 3.8, h: 0.25, fontSize: 9, bold: true, color: PPT_LAVA, fontFace: 'Calibri', charSpacing: 1 });
+    s2.addText(d.val, { x: x + 0.2, y: y + 0.28, w: 3.8, h: 0.3, fontSize: 13, bold: true, color: PPT_BLUE_DK, fontFace: 'Calibri' });
+  });
+
+  // Responsables
+  s2.addText('RESPONSABLES', { x: 0.5, y: 2.7, w: 12.33, h: 0.3, fontSize: 11, bold: true, color: PPT_BLUE_DK, fontFace: 'Calibri', charSpacing: 1 });
+  s2.addText(nombresResp(p.responsables), { x: 0.5, y: 3.0, w: 12.33, h: 0.4, fontSize: 13, color: PPT_DARK, fontFace: 'Calibri' });
+
+  // Tareas
+  s2.addText('TAREAS', { x: 0.5, y: 3.5, w: 12.33, h: 0.3, fontSize: 11, bold: true, color: PPT_BLUE_DK, fontFace: 'Calibri', charSpacing: 1 });
+  if ((p.tareas || []).length === 0) {
+    s2.addText('Este proyecto aún no tiene tareas registradas.', { x: 0.5, y: 3.85, w: 12.33, h: 0.5, fontSize: 12, italic: true, color: PPT_LAVA, fontFace: 'Calibri' });
+  } else {
+    const tblTareas = [[
+      { text: 'TAREA', options: { bold: true, color: PPT_WHITE, fill: PPT_BLUE_DK, align: 'left', valign: 'middle', fontSize: 10 }},
+      { text: 'RESPONSABLE', options: { bold: true, color: PPT_WHITE, fill: PPT_BLUE_DK, align: 'left', valign: 'middle', fontSize: 10 }},
+      { text: 'INICIO', options: { bold: true, color: PPT_WHITE, fill: PPT_BLUE_DK, align: 'center', valign: 'middle', fontSize: 10 }},
+      { text: 'FIN', options: { bold: true, color: PPT_WHITE, fill: PPT_BLUE_DK, align: 'center', valign: 'middle', fontSize: 10 }},
+      { text: 'AVANCE', options: { bold: true, color: PPT_WHITE, fill: PPT_BLUE_DK, align: 'center', valign: 'middle', fontSize: 10 }},
+    ]];
+    p.tareas.slice(0, 8).forEach((t, i) => {
+      const fillRow = i % 2 === 0 ? PPT_DOUGH1 : PPT_DOUGH2;
+      const av = (t.subtareas?.length>0) ? calcAvance(t) : t.avance;
+      tblTareas.push([
+        { text: t.nombre, options: { fontSize: 10, color: PPT_DARK, fill: fillRow, valign: 'middle', bold: true }},
+        { text: nombresResp(t.responsables), options: { fontSize: 9, color: PPT_DARK, fill: fillRow, valign: 'middle' }},
+        { text: fmtFecha(t.fecha_inicio), options: { fontSize: 9, color: PPT_DARK, fill: fillRow, align: 'center', valign: 'middle' }},
+        { text: fmtFecha(t.fecha_fin), options: { fontSize: 9, color: PPT_DARK, fill: fillRow, align: 'center', valign: 'middle' }},
+        { text: `${av}%`, options: { fontSize: 11, bold: true, color: av >= 50 ? PPT_GREEN : PPT_ORANGE, fill: fillRow, align: 'center', valign: 'middle' }},
+      ]);
+    });
+    s2.addTable(tblTareas, {
+      x: 0.5, y: 3.85, w: 12.33,
+      colW: [4.5, 3.5, 1.5, 1.5, 1.33],
+      rowH: 0.4,
+      border: { type: 'solid', pt: 0.5, color: PPT_DOUGH3 },
+      fontFace: 'Calibri'
+    });
+  }
+
+  const fechaFile = new Date().toISOString().substring(0,10);
+  const slug = p.nombre.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30);
+  await pptx.writeFile({ fileName: `Proyecto_${slug}_${fechaFile}.pptx` });
+  showToast('✓ PPT del proyecto descargado', 'success');
+  } catch (err) {
+    console.error('Error generando PPT proyecto:', err);
+    showToast('❌ Error: ' + err.message, 'error');
+    alert('Error generando PPT del proyecto:\n\n' + err.message);
+  }
+}
+
+function descargarPlantillaExcel(e) {
+  e.preventDefault();
+  const data = [{
+    nombre: 'Ejemplo: Migración sistema X',
+    tipo: 'general',
+    responsables: 'René Gonzalez, Ana Martínez',
+    fecha_inicio: '2026-05-15',
+    fecha_fin: '2026-08-30',
+    avance: 0,
+    estado: 'planeado',
+    prioridad: 'alta',
+    color: '#0090E2',
+    descripcion: 'Descripción del proyecto',
+    ceco: ''
+  }];
+  const ws = XLSX.utils.json_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Plantilla');
+  XLSX.writeFile(wb, 'plantilla_proyectos.xlsx');
+  showToast('✓ Plantilla descargada', 'success');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  EVENT WIRING
+// ═══════════════════════════════════════════════════════════════════
+function setupEvents() {
+  // Tabs de vista
+  document.querySelectorAll('.view-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.view-panel').forEach(p => p.classList.remove('active'));
+      tab.classList.add('active');
+      const v = tab.dataset.view;
+      $('view-'+v).classList.add('active');
+      STATE.view = v;
+      renderVistaActiva();
+    });
+  });
+
+  // Tabs de detalle
+  document.querySelectorAll('.detail-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.detail-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      ['dt-info','dt-tareas','dt-comentarios','dt-dependencias'].forEach(id => {
+        $(id).classList.toggle('active', id === 'dt-' + tab.dataset.dt);
+      });
+    });
+  });
+
+  // Filtros
+  $('search').addEventListener('input', e => {
+    STATE.filtros.search = e.target.value;
+    renderTodo();
+  });
+  $('filter-estado').addEventListener('change', e => {
+    STATE.filtros.estado = e.target.value;
+    renderTodo();
+  });
+  $('filter-tipo').addEventListener('change', e => {
+    STATE.filtros.tipo = e.target.value;
+    renderTodo();
+  });
+  $('filter-responsable').addEventListener('change', e => {
+    STATE.filtros.responsable = e.target.value;
+    renderTodo();
+  });
+
+  // Cerrar notif al click fuera
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.notif-bell') && !e.target.closest('.notif-panel')) {
+      $('notif-panel').classList.remove('open');
+    }
+  });
+
+  // Cerrar modales al click fuera
+  document.querySelectorAll('.modal-overlay').forEach(ov => {
+    ov.addEventListener('click', e => {
+      if (e.target === ov) ov.classList.remove('open');
+    });
+  });
+
+  // Llenar select de responsables en filtros
+  $('filter-responsable').innerHTML = '<option value="">Todos los responsables</option>' +
+    RESPONSABLES.map(r => `<option value="${r.id}">${esc(r.nombre)}</option>`).join('');
+}
+
+function renderVistaActiva() {
+  if (STATE.view === 'lista')  renderLista();
+  if (STATE.view === 'gantt')  renderGantt();
+  if (STATE.view === 'kanban') renderKanban();
+}
+function renderTodo() {
+  renderStats();
+  renderVistaActiva();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  BOOT
+// ═══════════════════════════════════════════════════════════════════
+async function init() {
+  document.getElementById('header-logo').src = IMG_LOGO_HEADER;
+  const libsFaltantes = [];
+  if (typeof XLSX === 'undefined') libsFaltantes.push('XLSX');
+  if (typeof PptxGenJS === 'undefined') libsFaltantes.push('PptxGenJS');
+  if (typeof html2canvas === 'undefined') libsFaltantes.push('html2canvas');
+  if (libsFaltantes.length > 0) {
+    console.warn('⚠️ Librerías faltantes:', libsFaltantes.join(', '));
+    setTimeout(() => showToast(`⚠️ ${libsFaltantes.length} librerías no cargaron`, 'error'), 800);
+  } else {
+    console.log('✅ Librerías OK');
+  }
+  setupEvents();
+  // Cargar datos del backend
+  await loadUsuarios();
+  await loadProyectos();
+  await loadNotificaciones();
+  renderNotif();
+  renderTodo();
+}
+init();
+</script>
+
+</body>
+</html>

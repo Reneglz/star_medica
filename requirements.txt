@@ -1,0 +1,6 @@
+Flask==3.0.3
+Flask-Login==0.6.3
+SQLAlchemy==2.0.32
+psycopg2-binary==2.9.9      # PostgreSQL (para deploy web con Neon/Render)
+waitress==3.0.0            # servidor de producción (local / .exe)
+gunicorn==22.0.0           # servidor para deploy web (Render)

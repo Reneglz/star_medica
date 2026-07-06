@@ -1,0 +1,15 @@
+# ── NO subir a Git ──
+data/                 # base de datos SQLite (contiene usuarios y proyectos)
+*.db
+*.sqlite3
+__pycache__/
+*.pyc
+.env                  # secretos (SECRET_KEY, etc.)
+.DS_Store
+venv/
+
+# Instalador / build (Windows)
+config.env          # secretos y marca por cliente
+dist/
+build/
+*.exe

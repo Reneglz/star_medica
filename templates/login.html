@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Ingresar · {{ marca.nombre }}</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root{
+    --blue:{{ marca.primario }}; --blue-dk:{{ marca.primario_oscuro }}; --green:{{ marca.acento }};
+    --dark:#0F2A3F; --red:#E4002B;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;font-family:'Segoe UI',system-ui,sans-serif}
+  body{min-height:100vh;display:flex;align-items:center;justify-content:center;
+       background:linear-gradient(135deg,var(--blue-dk) 0%,var(--blue) 100%);padding:20px}
+  .card{background:#fff;border-radius:18px;padding:38px 34px;width:100%;max-width:380px;
+        box-shadow:0 24px 60px rgba(0,0,0,.28)}
+  .logo{height:46px;width:auto;max-width:190px;margin:0 auto 16px;display:block}
+  h1{font-size:20px;color:var(--dark);text-align:center;font-weight:800}
+  .sub{font-size:12px;color:#5E7688;text-align:center;letter-spacing:1.5px;
+       text-transform:uppercase;margin-bottom:26px}
+  label{font-size:12px;font-weight:700;color:var(--dark);display:block;margin:14px 0 5px}
+  input{width:100%;padding:12px 14px;border:1.5px solid #D8E5EF;border-radius:10px;
+        font-size:14px;transition:border .15s;outline:none}
+  input:focus{border-color:var(--blue)}
+  button{width:100%;margin-top:24px;padding:13px;border:none;border-radius:10px;
+         background:linear-gradient(135deg,var(--blue) 0%,var(--blue-dk) 100%);
+         color:#fff;font-size:15px;font-weight:800;cursor:pointer;transition:transform .12s}
+  button:hover{transform:translateY(-1px)}
+  .msg{background:#FDE7EB;color:var(--red);border:1px solid #f7b8c4;border-radius:9px;
+       padding:10px 12px;font-size:13px;margin-bottom:16px;text-align:center}
+  .pie{margin-top:20px;text-align:center;font-size:11px;color:#93A9BC}
+</style>
+</head>
+<body>
+  <div class="card">
+    <img class="logo" src="{{ marca.logo }}" alt="{{ marca.nombre }}">
+    <h1>{{ marca.producto }}</h1>
+    <div class="sub">{{ marca.nombre }}</div>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}<div class="msg">{{ messages[0] }}</div>{% endif %}
+    {% endwith %}
+
+    <form method="POST" action="{{ url_for('login') }}">
+      <label>Correo</label>
+      <input type="email" name="email" placeholder="tu.correo@empresa.com" required autofocus>
+      <label>Contraseña</label>
+      <input type="password" name="password" placeholder="••••••••" required>
+      <button type="submit">Ingresar</button>
+    </form>
+    <div class="pie">Acceso restringido · Uso interno</div>
+  </div>
+</body>
+</html>
